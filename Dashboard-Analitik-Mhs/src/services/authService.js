@@ -1,173 +1,251 @@
-// DASHBOARD-ANALITIK-MHS/src/services/authService.js
+// FRONTEND/src/services/authService.js
 import { API_URL } from '../config/api';
+
+console.log('🔧 Auth Service - API_URL:', API_URL);
 
 export const authService = {
     // ============ LOGIN ============
     login: async (username, password) => {
-        const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ username, password })
-        });
+        try {
+            console.log('📤 Login request to:', `${API_URL}/auth/login`);
+            
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
 
-        const data = await response.json();
+            console.log('📥 Response status:', response.status);
 
-        if (!response.ok) {
-            throw new Error(data.message || 'Login gagal');
+            // Coba parse response
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                console.error('❌ Failed to parse JSON:', parseError);
+                throw new Error('Response tidak valid dari server');
+            }
+
+            console.log('📥 Response data:', data);
+
+            // ❌ HAPUS validasi status 'Success' karena backend tidak pakai ini
+            // if (data.status !== 'Success') {
+            //     throw new Error(data.message || 'Login gagal');
+            // }
+
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Login gagal');
+            }
+
+            // ✅ Backend langsung mengembalikan { token, user }
+            if (data.token && data.user) {
+                console.log('✅ Login success - token received');
+                return {
+                    token: data.token,
+                    user: data.user
+                };
+            }
+
+            // ❌ Jika format tidak sesuai
+            console.error('❌ Unexpected response format:', data);
+            throw new Error('Format response tidak dikenali');
+
+        } catch (error) {
+            console.error('❌ Login service error:', error);
+            throw error;
         }
-
-        if (data.status !== 'Success') {
-            throw new Error(data.message || 'Login gagal');
-        }
-
-        return data.data;
     },
 
     // ============ REGISTER ============
     register: async (userData) => {
-        const response = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(userData)
-        });
+        try {
+            const response = await fetch(`${API_URL}/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userData)
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.message || 'Registrasi gagal');
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Registrasi gagal');
+            }
+
+            // Backend mungkin return user data langsung
+            return data.user || data;
+
+        } catch (error) {
+            console.error('❌ Register error:', error);
+            throw error;
         }
-
-        return data.data;
     },
 
     // ============ LOGOUT ============
     logout: async () => {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/auth/logout`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return { success: true };
 
-        const data = await response.json();
-        return data;
+            const response = await fetch(`${API_URL}/auth/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Logout error:', error);
+            return { success: true };
+        }
     },
 
     // ============ GET PROFILE ============
     getProfile: async () => {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/auth/profile`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('Token tidak ditemukan');
             }
-        });
 
-        const data = await response.json();
+            const response = await fetch(`${API_URL}/auth/profile`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
 
-        if (!response.ok) {
-            throw new Error(data.message || 'Gagal mengambil profile');
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Gagal mengambil profile');
+            }
+
+            // Backend return user langsung
+            return data.user || data;
+
+        } catch (error) {
+            console.error('❌ Get profile error:', error);
+            throw error;
         }
-
-        return data.data;
     },
 
     // ============ UPDATE PROFILE ============
     updateProfile: async (data) => {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/auth/profile`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        });
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('Token tidak ditemukan');
+            }
 
-        const result = await response.json();
+            const response = await fetch(`${API_URL}/auth/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
 
-        if (!response.ok) {
-            throw new Error(result.message || 'Gagal update profile');
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || result.error || 'Gagal update profile');
+            }
+
+            return result.user || result;
+
+        } catch (error) {
+            console.error('❌ Update profile error:', error);
+            throw error;
         }
-
-        return result.data;
     },
 
     // ============ CHANGE PASSWORD ============
     changePassword: async (oldPassword, newPassword) => {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/auth/change-password`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ oldPassword, newPassword })
-        });
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('Token tidak ditemukan');
+            }
 
-        const data = await response.json();
+            const response = await fetch(`${API_URL}/auth/change-password`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ oldPassword, newPassword })
+            });
 
-        if (!response.ok) {
-            throw new Error(data.message || 'Gagal mengubah password');
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Gagal mengubah password');
+            }
+
+            return data;
+
+        } catch (error) {
+            console.error('❌ Change password error:', error);
+            throw error;
         }
-
-        return data;
     },
 
     // ============ REQUEST RESET PASSWORD ============
     requestResetPassword: async (email) => {
-        const response = await fetch(`${API_URL}/auth/reset-password`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ email })
-        });
+        try {
+            const response = await fetch(`${API_URL}/auth/forgot-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email })
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.message || 'Gagal request reset password');
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Gagal request reset password');
+            }
+
+            return data;
+
+        } catch (error) {
+            console.error('❌ Request reset password error:', error);
+            throw error;
         }
-
-        return data;
-    },
-
-    // ============ VERIFY RESET TOKEN ============
-    verifyResetToken: async (token) => {
-        const response = await fetch(`${API_URL}/auth/reset-password/${token}`);
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || 'Token tidak valid');
-        }
-
-        return data;
     },
 
     // ============ RESET PASSWORD ============
     resetPassword: async (token, newPassword) => {
-        const response = await fetch(`${API_URL}/auth/reset-password/confirm`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ token, newPassword })
-        });
+        try {
+            const response = await fetch(`${API_URL}/auth/reset-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token, newPassword })
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.message || 'Gagal reset password');
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Gagal reset password');
+            }
+
+            return data;
+
+        } catch (error) {
+            console.error('❌ Reset password error:', error);
+            throw error;
         }
-
-        return data;
     }
 };
