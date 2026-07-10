@@ -111,7 +111,7 @@ app.get('/api/health', async(req, res) => {
 });
 
 // ============ WELCOME ROUTE ============
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
     res.json({
         name: 'Dashboard Analitik Mahasiswa API',
         version: '1.0.0',
