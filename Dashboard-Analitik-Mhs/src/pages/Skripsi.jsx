@@ -1,0 +1,230 @@
+import { useState, useEffect } from 'react';
+import { Search, FileText, Loader, AlertTriangle, Download, ChevronRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { apiService } from '../services/apiService';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+
+const STATUS_CONFIG = {
+  'Belum Mulai': { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
+  'Proposal Diajukan': { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
+  'Seminar Proposal': { bg: 'bg-indigo-100', text: 'text-indigo-700', dot: 'bg-indigo-500' },
+  'Penelitian': { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-500' },
+  'Seminar Hasil': { bg: 'bg-orange-100', text: 'text-orange-700', dot: 'bg-orange-500' },
+  'Sidang Skripsi': { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
+  'Selesai': { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
+  'Revisi': { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
+};
+
+const Skripsi = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('Semua Status');
+  const [filterAngkatan, setFilterAngkatan] = useState('Semua Angkatan');
+  const [skripsiList, setSkripsiList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchSkripsi();
+  }, []);
+
+  const fetchSkripsi = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiService.getSkripsiData();
+      if (user?.role === 'mahasiswa' && user?.nim) {
+        setSkripsiList(data.filter(s => s.nim === user.nim));
+      } else {
+        setSkripsiList(data);
+      }
+    } catch (err) {
+      console.error('Error fetching skripsi:', err);
+      setError(err.message || 'Gagal mengambil data skripsi');
+      toast.error('Gagal mengambil data skripsi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExport = (format) => {
+    toast.success(`Data skripsi diexport ke ${format}`);
+  };
+
+  const filteredData = skripsiList.filter((item) => {
+    const matchSearch = 
+      (item.nama?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+      (item.nim?.includes(searchTerm) || false);
+    const matchStatus = filterStatus === 'Semua Status' || item.status === filterStatus;
+    const matchAngkatan = filterAngkatan === 'Semua Angkatan' || item.angkatan?.toString() === filterAngkatan;
+    return matchSearch && matchStatus && matchAngkatan;
+  });
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in font-poppins">
+        <div className="bg-white border border-[#d4eaf3] rounded-2xl p-6 shadow-sm">
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+            <Loader size={40} className="animate-spin text-[#06446B]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 animate-fade-in font-poppins">
+        <div className="bg-white border border-[#d4eaf3] rounded-2xl p-6 shadow-sm">
+          <div className="text-red-600 flex items-center gap-2">
+            <AlertTriangle size={24} />
+            <span className="font-semibold">{error}</span>
+          </div>
+          <button onClick={fetchSkripsi} className="mt-4 px-6 py-2.5 bg-[#06446B] text-white rounded-xl text-sm font-bold shadow-lg shadow-[#06446B]/20 hover:-translate-y-0.5 transition-all">Coba Lagi</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 animate-fade-in font-poppins pb-10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-[#06446B] flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#06446B] to-[#5790AB] text-white flex items-center justify-center shadow-lg">
+              <FileText size={24} />
+            </div>
+            Monitoring Skripsi
+          </h1>
+          <p className="text-[#6b8fa8] mt-2 font-medium">Pemantauan progres penyelesaian skripsi mahasiswa secara menyeluruh</p>
+        </div>
+        {(user?.role === 'admin' || user?.role === 'kaprodi') && (
+          <div className="flex gap-3">
+            {['Excel', 'PDF'].map(format => (
+              <button 
+                key={format}
+                onClick={() => handleExport(format)} 
+                className="px-4 py-2 bg-white border border-[#d4eaf3] text-[#06446B] rounded-xl text-sm font-bold shadow-sm hover:border-[#5790AB] hover:text-[#5790AB] transition-all flex items-center gap-2 hover:-translate-y-0.5"
+              >
+                <Download size={16} /> {format}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl shadow-[#06446B]/5 border border-[#e8f6fa] relative overflow-hidden">
+        {/* Dekoratif blur background */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#5790AB]/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+        <div className="flex flex-col md:flex-row gap-4 mb-8 relative z-10">
+          <div className="relative flex-1 min-w-[250px]">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9ccddb]" />
+            <input 
+              type="text" 
+              placeholder="Cari NIM atau Nama..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="w-full pl-11 pr-4 py-3 bg-[#f8fbfd] border border-[#d4eaf3] rounded-xl text-sm focus:outline-none focus:border-[#5790AB] focus:ring-4 focus:ring-[#5790AB]/10 text-[#0f2740] font-semibold transition-all placeholder:text-[#9ccddb]" 
+            />
+          </div>
+          <select 
+            value={filterStatus} 
+            onChange={(e) => setFilterStatus(e.target.value)} 
+            className="px-4 py-3 bg-[#f8fbfd] border border-[#d4eaf3] rounded-xl text-sm focus:outline-none focus:border-[#5790AB] focus:ring-4 focus:ring-[#5790AB]/10 text-[#0f2740] font-semibold min-w-[180px] cursor-pointer transition-all"
+          >
+            <option value="Semua Status">Semua Status</option>
+            {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select 
+            value={filterAngkatan} 
+            onChange={(e) => setFilterAngkatan(e.target.value)} 
+            className="px-4 py-3 bg-[#f8fbfd] border border-[#d4eaf3] rounded-xl text-sm focus:outline-none focus:border-[#5790AB] focus:ring-4 focus:ring-[#5790AB]/10 text-[#0f2740] font-semibold min-w-[160px] cursor-pointer transition-all"
+          >
+            <option value="Semua Angkatan">Semua Angkatan</option>
+            {['2019', '2020', '2021', '2022', '2023', '2024', '2025'].map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+
+        <div className="overflow-x-auto rounded-2xl border border-[#d4eaf3] bg-white relative z-10 shadow-sm">
+          <table className="w-full text-left border-collapse whitespace-nowrap md:whitespace-normal">
+            <thead>
+              <tr className="bg-gradient-to-r from-[#f1f8fb] to-[#f8fbfd] border-b border-[#d4eaf3]">
+                <th className="p-4 text-[#06446B] text-[11px] font-extrabold uppercase tracking-wider">No</th>
+                <th className="p-4 text-[#06446B] text-[11px] font-extrabold uppercase tracking-wider">NIM</th>
+                <th className="p-4 text-[#06446B] text-[11px] font-extrabold uppercase tracking-wider">Mahasiswa</th>
+                <th className="p-4 text-[#06446B] text-[11px] font-extrabold uppercase tracking-wider">Judul Skripsi</th>
+                <th className="p-4 text-[#06446B] text-[11px] font-extrabold uppercase tracking-wider">Dosen Pembimbing</th>
+                <th className="p-4 text-[#06446B] text-[11px] font-extrabold uppercase tracking-wider">Status</th>
+                <th className="p-4"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.map((item, index) => (
+                <tr 
+                  key={item.nim} 
+                  className="border-b border-[#f1f8fb] hover:bg-[#f8fbfd] transition-colors cursor-pointer group" 
+                  onClick={() => navigate(`/mahasiswa/${item.nim}`)}
+                >
+                  <td className="p-4 text-[#6b8fa8] text-sm font-bold">{index + 1}</td>
+                  <td className="p-4">
+                    <span className="inline-block px-3 py-1 bg-white border border-[#d4eaf3] rounded-lg font-bold text-[#06446B] text-xs shadow-sm group-hover:border-[#5790AB] transition-colors">{item.nim}</span>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-bold text-[#0f2740] text-sm">{item.nama}</div>
+                    <div className="text-[11px] text-[#6b8fa8] font-semibold mt-0.5">Angkatan {item.angkatan}</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="text-[#6b8fa8] text-xs font-medium max-w-[280px] line-clamp-2 leading-relaxed" title={item.judul}>
+                      {item.judul}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="inline-flex items-center gap-2 bg-[#f1f8fb] px-3 py-1.5 rounded-lg border border-[#e8f6fa]">
+                      <div className="w-5 h-5 rounded-full bg-[#5790AB] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {item.dosenPembimbing.charAt(0)}
+                      </div>
+                      <span className="text-[#0f2740] text-xs font-bold truncate max-w-[150px]">{item.dosenPembimbing}</span>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <span className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 w-max border ${STATUS_CONFIG[item.status]?.bg || 'bg-gray-100'} ${STATUS_CONFIG[item.status]?.text || 'text-gray-600'} border-black/5 shadow-sm`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[item.status]?.dot || 'bg-gray-400'} shadow-sm`}></span>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="p-4 pr-6 text-right">
+                    <div className="w-8 h-8 rounded-full bg-white border border-[#d4eaf3] flex items-center justify-center text-[#9ccddb] group-hover:bg-[#06446B] group-hover:text-white group-hover:border-[#06446B] transition-all ml-auto shadow-sm">
+                      <ChevronRight size={16} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredData.length === 0 && (
+                <tr>
+                  <td colSpan="7" className="p-12 text-center">
+                    <div className="w-16 h-16 rounded-full bg-[#f1f8fb] flex items-center justify-center mx-auto mb-4">
+                      <Search size={24} className="text-[#9ccddb]" />
+                    </div>
+                    <p className="text-[#0f2740] font-bold text-lg">Pencarian Tidak Ditemukan</p>
+                    <p className="text-[#6b8fa8] font-medium mt-1">Coba gunakan kata kunci atau filter lain.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        <div className="mt-6 flex items-center justify-between">
+          <div className="text-xs font-bold text-[#6b8fa8] bg-[#f8fbfd] px-4 py-2 rounded-xl border border-[#e8f6fa]">
+            Menampilkan <span className="text-[#06446B]">{filteredData.length}</span> data
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Skripsi;
