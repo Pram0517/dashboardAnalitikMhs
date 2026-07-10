@@ -119,6 +119,8 @@ const deleteMahasiswa = async (req, res) => {
   }
 };
 
+const pool = require('../config/database');
+
 // ============ GET ALL MAHASISWA WITH DETAILS ============
 const getAllWithDetails = async (req, res) => {
     try {
