@@ -65,6 +65,8 @@ const login = async (req, res) => {
     try {
         const { username, password } = req.body;
 
+        console.log('📥 Login attempt:', { username });
+
         if (!username || !password) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json(
                 formatResponse('Error', 'Username/NIM dan password harus diisi')
@@ -72,16 +74,23 @@ const login = async (req, res) => {
         }
 
         const result = await authService.loginUser(username, password);
+        
+        console.log('✅ Login successful for:', username);
 
-        res.status(HTTP_STATUS.OK).json(
-            formatResponse('Success', 'Login berhasil', result)
-        );
+        // ✅ KEMBALIKAN LANGSUNG result TANPA wrapper formatResponse
+        // Karena frontend mengharapkan { token, user }
+        res.status(HTTP_STATUS.OK).json(result);
+        
     } catch (error) {
+        console.error('❌ Login error:', error.message);
+        console.error('Stack:', error.stack);
+        
         res.status(HTTP_STATUS.UNAUTHORIZED).json(
-            formatResponse('Error', error.message)
+            formatResponse('Error', error.message || 'Username atau password salah')
         );
     }
 };
+
 
 // ============ GET PROFILE ============
 const getProfile = async (req, res) => {

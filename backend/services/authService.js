@@ -47,91 +47,113 @@ class AuthService {
 
     // ============ LOGIN USER ============
     async loginUser(username, password) {
-        // Cari user dengan JOIN ke mahasiswa - menggunakan 'name' bukan 'nama_lengkap'
-        const result = await pool.query(
-            `SELECT 
-                u.id,
-                u.name as name,
-                u.email,
-                u.password,
-                u.role,
-                u.is_active,
-                m.id as mahasiswa_id,
-                m.npm,
-                m.nama_lengkap,
-                m.semester,
-                m.gpa,
-                m.status as mahasiswa_status,
-                SUBSTRING(m.npm, 1, 4) as angkatan
-             FROM users u
-             LEFT JOIN mahasiswa m ON u.id = m.user_id
-             WHERE u.email = $1 OR m.npm = $1`,
-            [username]
-        );
+    console.log('🔐 LoginService: Attempt for', username);
+    
+    // Cari user dengan JOIN ke mahasiswa
+    const result = await pool.query(
+        `SELECT 
+            u.id,
+            u.name as name,
+            u.email,
+            u.password,
+            u.role,
+            u.is_active,
+            m.id as mahasiswa_id,
+            m.npm,
+            m.nama_lengkap,
+            m.semester,
+            m.gpa,
+            m.status as mahasiswa_status,
+            SUBSTRING(m.npm, 1, 4) as angkatan
+         FROM users u
+         LEFT JOIN mahasiswa m ON u.id = m.user_id
+         WHERE u.email = $1 OR m.npm = $1`,
+        [username]
+    );
 
-        if (result.rows.length === 0) {
-            throw new Error('Username atau password salah');
-        }
+    console.log('📊 Query result:', result.rows.length > 0 ? 'User found' : 'User not found');
+    
+    if (result.rows.length === 0) {
+        console.log('❌ User not found for:', username);
+        throw new Error('Username atau password salah');
+    }
 
-        const user = result.rows[0];
+    const user = result.rows[0];
+    console.log('👤 User found:', { 
+        id: user.id, 
+        email: user.email,
+        role: user.role,
+        is_active: user.is_active
+    });
 
-        // Cek apakah user aktif
-        if (!user.is_active) {
-            throw new Error('Akun Anda telah dinonaktifkan. Hubungi administrator.');
-        }
+    // Cek apakah user aktif
+    if (!user.is_active) {
+        console.log('❌ User not active');
+        throw new Error('Akun Anda telah dinonaktifkan. Hubungi administrator.');
+    }
 
-        // Verifikasi password
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            throw new Error('Username atau password salah');
-        }
+    // Verifikasi password
+    console.log('🔑 Verifying password...');
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log('✅ Password match:', isPasswordValid);
+    
+    if (!isPasswordValid) {
+        console.log('❌ Invalid password for:', username);
+        throw new Error('Username atau password salah');
+    }
 
-        // Generate JWT token
-        const tokenPayload = {
+    // Generate JWT token
+    const tokenPayload = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        nim: user.npm || null,
+        mahasiswa_id: user.mahasiswa_id || null,
+        npm: user.npm || null,
+        angkatan: user.angkatan || null
+    };
+
+    const token = jwt.sign(
+        tokenPayload,
+        process.env.JWT_SECRET || 'your_jwt_secret',
+        { expiresIn: process.env.JWT_EXPIRE || '7d' }
+    );
+
+    console.log('✅ Token generated for user:', user.id);
+
+    // Update last login
+    await pool.query(
+        'UPDATE users SET updated_at = NOW() WHERE id = $1',
+        [user.id]
+    );
+
+    // Hapus password dari response
+    delete user.password;
+
+    // Format response untuk frontend
+    const response = {
+        token,
+        user: {
             id: user.id,
             name: user.name,
             email: user.email,
             role: user.role,
             nim: user.npm || null,
             mahasiswa_id: user.mahasiswa_id || null,
-            npm: user.npm || null,
-            angkatan: user.angkatan || null
-        };
+            nama_lengkap: user.nama_lengkap || user.name || null,
+            semester: user.semester || 1,
+            gpa: user.gpa || null,
+            mahasiswa_status: user.mahasiswa_status || 'aktif',
+            angkatan: user.angkatan || null,
+            npm: user.npm || null
+        }
+    };
 
-        const token = jwt.sign(
-            tokenPayload,
-            process.env.JWT_SECRET || 'your_jwt_secret',
-            { expiresIn: process.env.JWT_EXPIRE || '7d' }
-        );
+    console.log('✅ Login response prepared for user:', user.id);
+    return response;
+}
 
-        // Update last login
-        await pool.query(
-            'UPDATE users SET updated_at = NOW() WHERE id = $1',
-            [user.id]
-        );
-
-        // Hapus password dari response
-        delete user.password;
-
-        // Format response untuk frontend
-        return {
-            token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                nim: user.npm || null,
-                mahasiswa_id: user.mahasiswa_id || null,
-                nama_lengkap: user.nama_lengkap || user.name || null,
-                semester: user.semester || 1,
-                gpa: user.gpa || null,
-                mahasiswa_status: user.mahasiswa_status || 'aktif',
-                angkatan: user.angkatan || null,
-                npm: user.npm || null
-            }
-        };
-    }
 
     // ============ GET USER BY ID ============
     async getUserById(userId) {
