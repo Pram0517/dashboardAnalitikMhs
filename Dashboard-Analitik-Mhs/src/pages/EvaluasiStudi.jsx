@@ -962,7 +962,7 @@ const EvaluasiStudi = () => {
         params.append('angkatan', filterAngkatan);
       }
 
-      const response = await fetch(`http://localhost:5000/api/export/mahasiswa?${params.toString()}`, {
+      const response = await fetch(`https://dashboardanalitikmhs-production.up.railway.app/api/export/mahasiswa?${params.toString()}`, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -976,7 +976,7 @@ const EvaluasiStudi = () => {
 
       const data = await response.json();
       
-      const downloadResponse = await fetch(`http://localhost:5000/api/export/download/${data.data.filename}`, {
+      const downloadResponse = await fetch(`https://dashboardanalitikmhs-production.up.railway.app/api/export/download/${data.data.filename}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 // ============ [PAGE: UPLOAD KHS] ============
 // [KOMPONEN] Upload - Halaman bagi Mahasiswa untuk mengunggah file KHS PDF
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://dashboardanalitikmhs-production.up.railway.app/api';
 
 const Upload = () => {
     const { user } = useAuth();
@@ -340,7 +340,7 @@ const Upload = () => {
                                         : 'File tidak tersedia';
                                     
                                     const fileUrl = item.file_path 
-                                        ? `http://localhost:5000${item.file_path}` 
+                                        ? `https://dashboardanalitikmhs-production.up.railway.app${item.file_path}` 
                                         : null;
 
                                     return (

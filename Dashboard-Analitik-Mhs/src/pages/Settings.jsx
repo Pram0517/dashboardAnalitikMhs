@@ -18,7 +18,7 @@ const T = {
 };
 
 const avatarGradient = `linear-gradient(135deg, ${T.mid} 0%, ${T.navy} 100%)`;
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://dashboardanalitikmhs-production.up.railway.app/api';
 
 // ============ [COMPONENTS] ============
 const NavItem = ({ icon: Icon, label, active, onClick }) => (

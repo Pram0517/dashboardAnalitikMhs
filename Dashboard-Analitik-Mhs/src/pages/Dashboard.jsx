@@ -375,7 +375,7 @@ const Dashboard = () => {
     try {
       setLoadingAngkatan(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/dashboard/available-angkatan', {
+      const response = await fetch('https://dashboardanalitikmhs-production.up.railway.app/api/dashboard/available-angkatan', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
@@ -404,7 +404,7 @@ const Dashboard = () => {
   const fetchAngkatanCounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/dashboard/angkatan-counts', {
+      const response = await fetch('https://dashboardanalitikmhs-production.up.railway.app/api/dashboard/angkatan-counts', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
@@ -430,7 +430,7 @@ const Dashboard = () => {
       const token = localStorage.getItem('token');
       const params = angkatan !== 'Semua' ? `?angkatan=${angkatan}` : '';
 
-      const response = await fetch(`http://localhost:5000/api/dashboard/stats${params}`, {
+      const response = await fetch(`https://dashboardanalitikmhs-production.up.railway.app/api/dashboard/stats${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
@@ -458,7 +458,7 @@ const Dashboard = () => {
     console.log('📊 Fetching chart data with params:', params);
 
     // 1. GPA Trend
-    const gpaResponse = await fetch(`http://localhost:5000/api/dashboard/gpa-trend${params}`, {
+    const gpaResponse = await fetch(`https://dashboardanalitikmhs-production.up.railway.app/api/dashboard/gpa-trend${params}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const gpaData = await gpaResponse.json();
@@ -468,7 +468,7 @@ const Dashboard = () => {
     }
 
     // 2. Graduation Status
-    const gradResponse = await fetch(`http://localhost:5000/api/dashboard/grad-status${params}`, {
+    const gradResponse = await fetch(`https://dashboardanalitikmhs-production.up.railway.app/api/dashboard/grad-status${params}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const gradData = await gradResponse.json();
@@ -480,7 +480,7 @@ const Dashboard = () => {
     // 3. Problematic Courses - PERBAIKI
     console.log('📊 Fetching problematic courses...');
     
-    const coursesResponse = await fetch(`http://localhost:5000/api/dashboard/problematic-courses${params}`, {
+    const coursesResponse = await fetch(`https://dashboardanalitikmhs-production.up.railway.app/api/dashboard/problematic-courses${params}`, {
       headers: { 
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'

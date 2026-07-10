@@ -6,7 +6,7 @@ import { ArrowLeft, Loader } from 'lucide-react';
 // ============ [PAGE SECTION] ============
 // [KOMPONEN] ResetPassword - Halaman untuk request dan reset password
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://dashboardanalitikmhs-production.up.railway.app/api';
 
 const ResetPassword = () => {
     const { token } = useParams();
