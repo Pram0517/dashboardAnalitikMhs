@@ -7,6 +7,11 @@ require('dotenv').config();
 const pool = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 
+const net = require('net');
+if (typeof net.setDefaultAutoSelectFamily === 'function') {
+    net.setDefaultAutoSelectFamily(false);
+}
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
