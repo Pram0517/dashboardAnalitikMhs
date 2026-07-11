@@ -153,7 +153,9 @@ export const useStudentAnalytics = (nim) => {
                         nim: student.npm || student.nim || targetNim,
                         nama: student.nama_lengkap || student.nama || mockAkhir?.nama || 'Mahasiswa',
                         angkatan: student.angkatan || mockAkhir?.angkatan || 2022,
-                        status: student.status || 'Aktif',
+                        status: student.status 
+    ? student.status.charAt(0).toUpperCase() + student.status.slice(1).toLowerCase()
+    : 'Aktif',
                         semester: student.semester || 8,
                         evaluasiStatus: student.evaluasi_status || 'Belum Evaluasi',
                         evaluasiPemicu: student.evaluasi_pemicu || 'Studi berjalan normal',
