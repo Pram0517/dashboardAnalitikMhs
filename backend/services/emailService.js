@@ -20,7 +20,9 @@ const transporter = nodemailer.createTransport({
         pass: environment.email.password,
     },
     // ✅ Force IPv4
-    family: 4,
+    lookup: (hostname, options, callback) => {
+        dns.lookup(hostname, { family: 4 }, callback);
+    },
     // ✅ Timeout
     connectionTimeout: 10000,
     greetingTimeout: 10000,

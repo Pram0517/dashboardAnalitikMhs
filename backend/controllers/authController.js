@@ -6,6 +6,7 @@ const { validateEmail, validatePassword } = require('../utils/validators');
 const { sendResetPasswordEmail } = require('../services/emailService');
 const crypto = require('crypto');
 const pool = require('../config/database');
+const environment = require('../config/environment');
 
 // ============ REGISTER ============
 const register = async (req, res) => {
