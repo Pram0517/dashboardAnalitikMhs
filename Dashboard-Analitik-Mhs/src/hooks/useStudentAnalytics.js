@@ -7,6 +7,23 @@ const GRADE_WEIGHTS = {
     'A': 4.00, 'A-': 3.75, 'B+': 3.50, 'B': 3.00, 'B-': 2.75, 'C+': 2.50, 'C': 2.00, 'C-': 1.75, 'D+': 1.50, 'D': 1.00, 'E': 0.00
 };
 
+// ============ NORMALISASI STATUS MAHASISWA ============
+// Backend menyimpan status dalam huruf kecil ('aktif', 'cuti', 'non-aktif'),
+// sedangkan tampilan (badge) mengharapkan format Capitalized ('Aktif', 'Cuti', 'Non-Aktif').
+const STATUS_MAP = {
+    'aktif': 'Aktif',
+    'cuti': 'Cuti',
+    'non-aktif': 'Non-Aktif',
+    'nonaktif': 'Non-Aktif',
+    'lulus': 'Lulus'
+};
+
+const normalizeStatus = (rawStatus) => {
+    if (!rawStatus) return 'Aktif';
+    const key = rawStatus.toString().trim().toLowerCase();
+    return STATUS_MAP[key] || (key.charAt(0).toUpperCase() + key.slice(1));
+};
+
 export const useStudentAnalytics = (nim) => {
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -153,9 +170,9 @@ export const useStudentAnalytics = (nim) => {
                         nim: student.npm || student.nim || targetNim,
                         nama: student.nama_lengkap || student.nama || mockAkhir?.nama || 'Mahasiswa',
                         angkatan: student.angkatan || mockAkhir?.angkatan || 2022,
-                        status: student.status 
-    ? student.status.charAt(0).toUpperCase() + student.status.slice(1).toLowerCase()
-    : 'Aktif',
+                        // FIX: normalisasi status supaya konsisten 'Aktif' / 'Cuti' / 'Non-Aktif'
+                        // (backend menyimpan huruf kecil seperti 'aktif', badge butuh 'Aktif')
+                        status: normalizeStatus(student.status),
                         semester: student.semester || 8,
                         evaluasiStatus: student.evaluasi_status || 'Belum Evaluasi',
                         evaluasiPemicu: student.evaluasi_pemicu || 'Studi berjalan normal',
