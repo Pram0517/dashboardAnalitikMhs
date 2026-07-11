@@ -197,7 +197,7 @@ const requestResetPassword = async (req, res) => {
             );
         }
 
-        // Cek apakah user ada - menggunakan 'name' bukan 'nama_lengkap'
+        // Cek apakah user ada
         const userResult = await pool.query(
             'SELECT id, name as name, email FROM users WHERE email = $1',
             [email]
@@ -222,19 +222,38 @@ const requestResetPassword = async (req, res) => {
             [email, token, expiresAt]
         );
 
-        // Kirim email
-        await sendResetPasswordEmail(email, token, user.name);
+        // ✅ Kirim email dengan try-catch
+        let emailSent = false;
+        try {
+            await sendResetPasswordEmail(email, token, user.name);
+            emailSent = true;
+        } catch (emailError) {
+            console.error('❌ Failed to send email:', emailError.message);
+        }
+
+        const resetLink = `${environment.frontendUrl || process.env.FRONTEND_URL || 'https://dashboardanalitikmhs-production.up.railway.app'}/reset-password/${token}`;
+
+        // ✅ Response dengan link jika email gagal
+        if (!emailSent) {
+            return res.status(HTTP_STATUS.OK).json(
+                formatResponse('Success', 
+                    'Link reset password: ' + resetLink,
+                    { resetLink: resetLink }
+                )
+            );
+        }
 
         res.status(HTTP_STATUS.OK).json(
             formatResponse('Success', 'Link reset password telah dikirim ke email Anda')
         );
     } catch (error) {
-        console.error('Request reset password error:', error);
+        console.error('❌ Request reset password error:', error);
         res.status(HTTP_STATUS.INTERNAL_ERROR).json(
             formatResponse('Error', error.message)
         );
     }
 };
+
 
 // ============ VERIFY RESET TOKEN ============
 const verifyResetToken = async (req, res) => {

@@ -1,30 +1,46 @@
+// BACKEND/services/emailService.js
 const nodemailer = require('nodemailer');
 const environment = require('../config/environment');
+const dns = require('dns');
 
-// Create transporter
+// =============================================
+// FORCE IPv4 - Atasi ENETUNREACH error
+// =============================================
+dns.setDefaultResultOrder('ipv4first');
+
+// =============================================
+// CREATE TRANSPORTER
+// =============================================
 const transporter = nodemailer.createTransport({
-    host: environment.email.host,
-    port: environment.email.port,
+    host: environment.email.host || 'smtp.gmail.com',
+    port: environment.email.port || 587,
     secure: environment.email.port === 465,
     auth: {
         user: environment.email.user,
         pass: environment.email.password,
     },
-    // Tambahan: timeout eksplisit supaya gagal cepat kalau koneksi SMTP diblokir,
-    // bukan menggantung lama tanpa respons.
-    connectionTimeout: 10000, // 10 detik
+    // ✅ Force IPv4
+    family: 4,
+    // ✅ Timeout
+    connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 10000,
+    // ✅ TLS
+    tls: {
+        rejectUnauthorized: false
+    }
 });
 
-// ============ SEND EMAIL ============
+// =============================================
+// SEND EMAIL
+// =============================================
 const sendEmail = async (to, subject, html, text = '') => {
     try {
         const mailOptions = {
             from: environment.email.from || 'noreply@dashboard.com',
             to,
             subject,
-            text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+            text: text || html.replace(/<[^>]*>/g, ''),
             html,
         };
 
@@ -37,9 +53,11 @@ const sendEmail = async (to, subject, html, text = '') => {
     }
 };
 
-// ============ SEND RESET PASSWORD EMAIL ============
+// =============================================
+// SEND RESET PASSWORD EMAIL
+// =============================================
 const sendResetPasswordEmail = async (email, resetToken, name) => {
-    const frontendUrl = environment.frontendUrl || 'http://localhost:5173';
+    const frontendUrl = environment.frontendUrl || process.env.FRONTEND_URL || 'https://dashboardanalitikmhs-production.up.railway.app';
     const resetLink = `${frontendUrl}/reset-password/${resetToken}`;
 
     const html = `
@@ -90,7 +108,9 @@ const sendResetPasswordEmail = async (email, resetToken, name) => {
     return sendEmail(email, 'Reset Password Akun Dashboard', html);
 };
 
-// ============ SEND WELCOME EMAIL ============
+// =============================================
+// SEND WELCOME EMAIL
+// =============================================
 const sendWelcomeEmail = async (email, name) => {
     const html = `
         <!DOCTYPE html>
@@ -126,8 +146,23 @@ const sendWelcomeEmail = async (email, name) => {
     return sendEmail(email, 'Selamat Datang di Dashboard Analitik Mahasiswa', html);
 };
 
+// =============================================
+// TEST EMAIL CONFIG
+// =============================================
+const testEmailConfig = async () => {
+    try {
+        await transporter.verify();
+        console.log('✅ Email configuration is valid');
+        return true;
+    } catch (error) {
+        console.error('❌ Email configuration error:', error.message);
+        return false;
+    }
+};
+
 module.exports = {
     sendEmail,
     sendResetPasswordEmail,
     sendWelcomeEmail,
+    testEmailConfig,
 };
