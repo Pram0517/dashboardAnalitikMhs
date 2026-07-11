@@ -8,6 +8,15 @@ const dns = require('dns');
 // =============================================
 dns.setDefaultResultOrder('ipv4first');
 
+const originalLookup = dns.lookup;
+dns.lookup = (hostname, options, callback) => {
+    if (typeof options === 'function') {
+        callback = options;
+        options = {};
+    }
+    return originalLookup.call(dns, hostname, { ...options, family: 4 }, callback);
+};
+
 // =============================================
 // CREATE TRANSPORTER
 // =============================================
@@ -19,15 +28,9 @@ const transporter = nodemailer.createTransport({
         user: environment.email.user,
         pass: environment.email.password,
     },
-    // ✅ Force IPv4
-    lookup: (hostname, options, callback) => {
-        dns.lookup(hostname, { family: 4 }, callback);
-    },
-    // ✅ Timeout
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 10000,
-    // ✅ TLS
     tls: {
         rejectUnauthorized: false
     }
