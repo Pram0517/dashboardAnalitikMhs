@@ -10,6 +10,11 @@ const transporter = nodemailer.createTransport({
         user: environment.email.user,
         pass: environment.email.password,
     },
+    // Tambahan: timeout eksplisit supaya gagal cepat kalau koneksi SMTP diblokir,
+    // bukan menggantung lama tanpa respons.
+    connectionTimeout: 10000, // 10 detik
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
 });
 
 // ============ SEND EMAIL ============
