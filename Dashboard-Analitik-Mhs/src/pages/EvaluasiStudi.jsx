@@ -1267,13 +1267,21 @@
                         <td className="es-center">
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', height: '100%' }}>
                             <button
-                              onClick={() => fetchMataKuliah(mhs.nim, mhs.nama || mhs.nama_lengkap)}
-                              className="es-btn-view-mk"
-                              title="Lihat Mata Kuliah"
-                            >
-                              <BookOpen size={13} />
-                              MK
-                            </button>
+  onClick={() => {
+    const nim = mhs.nim || mhs.npm; // ← Ambil dari nim atau npm
+    const nama = mhs.nama || mhs.nama_lengkap;
+    if (nim) {
+      fetchMataKuliah(nim, nama);
+    } else {
+      toast.error('NIM tidak ditemukan');
+    }
+  }}
+  className="es-btn-view-mk"
+  title="Lihat Mata Kuliah"
+>
+  <BookOpen size={13} />
+  MK
+</button>
                             <Link to={`/mahasiswa/${mhs.nim}`} className="es-detail-link">
                               <Eye size={13} />
                               Detail
