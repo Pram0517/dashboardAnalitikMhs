@@ -357,7 +357,7 @@ const Login = () => {
             boxShadow: '0 4px 16px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3)'
           }}>
             <img
-              src="src/assets/logo-uad.png"
+              src="/logo-uad.png"
               alt="Logo UAD"
               className="h-10 object-contain logo-img"
               onError={(e) => {
