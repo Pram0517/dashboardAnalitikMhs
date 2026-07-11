@@ -63,13 +63,13 @@ const getStats = async (req, res) => {
             ${filter}
         `;
 
-        // 5. Mahasiswa Berisiko (IPK < 2.5)
+        // 5. Mahasiswa Berisiko (IPK < 2.5) — FIX: pakai kolom ipk, bukan gpa
         const berisikoQuery = `
             SELECT COUNT(*) as total
             FROM mahasiswa m
             WHERE m.status = 'aktif'
-            AND m.gpa < 2.5
-            AND m.gpa IS NOT NULL
+            AND m.ipk < 2.5
+            AND m.ipk IS NOT NULL
             ${filter}
         `;
 
@@ -131,16 +131,17 @@ const getGpaTrend = async (req, res) => {
         let queryParams = filterParams;
 
         // Jika filter angkatan spesifik, tampilkan IPK per semester untuk angkatan tersebut
+        // FIX: pakai kolom m.ipk, bukan m.gpa
         if (angkatan && angkatan !== 'Semua' && angkatan !== 'undefined' && angkatan !== 'null') {
             query = `
                 SELECT 
                     semester as label,
-                    ROUND(AVG(gpa)::numeric, 2) as ipk,
+                    ROUND(AVG(m.ipk)::numeric, 2) as ipk,
                     COUNT(*) as jumlah_mahasiswa,
                     'Semester ' || semester as periode
                 FROM mahasiswa m
-                WHERE m.gpa IS NOT NULL
-                AND m.gpa > 0
+                WHERE m.ipk IS NOT NULL
+                AND m.ipk > 0
                 AND m.status = 'aktif'
                 ${filter}
                 GROUP BY semester
@@ -151,17 +152,17 @@ const getGpaTrend = async (req, res) => {
             query = `
                 SELECT 
                     angkatan as label,
-                    ROUND(AVG(gpa)::numeric, 2) as ipk,
+                    ROUND(AVG(m.ipk)::numeric, 2) as ipk,
                     COUNT(*) as jumlah_mahasiswa,
                     'Angkatan ' || angkatan as periode
                 FROM mahasiswa m
-                WHERE m.gpa IS NOT NULL
-                AND m.gpa > 0
+                WHERE m.ipk IS NOT NULL
+                AND m.ipk > 0
                 AND m.status = 'aktif'
                 AND angkatan IS NOT NULL
                 ${filter}
                 GROUP BY angkatan
-                HAVING AVG(gpa) > 0
+                HAVING AVG(m.ipk) > 0
                 ORDER BY angkatan ASC
             `;
         }
@@ -255,13 +256,13 @@ const getGraduationStatus = async (req, res) => {
         const terlambatResult = await pool.query(terlambatQuery, filterParams);
         const terlambat = parseInt(terlambatResult.rows[0]?.total || 0);
 
-        // 3. Mahasiswa dengan IPK < 2.5 (Berisiko)
+        // 3. Mahasiswa dengan IPK < 2.5 (Berisiko) — FIX: pakai kolom ipk, bukan gpa
         const berisikoQuery = `
             SELECT COUNT(*) as total
             FROM mahasiswa m
             WHERE m.status = 'aktif'
-            AND m.gpa < 2.5
-            AND m.gpa IS NOT NULL
+            AND m.ipk < 2.5
+            AND m.ipk IS NOT NULL
             ${filter}
         `;
         const berisikoResult = await pool.query(berisikoQuery, filterParams);
@@ -426,11 +427,12 @@ const getMahasiswaSummary = async (req, res) => {
             filterParams.push(angkatan);
         }
 
+        // FIX: pakai kolom m.ipk, bukan m.gpa
         const query = `
             SELECT 
                 COUNT(CASE WHEN m.status = 'aktif' THEN 1 END) as aktif,
                 COUNT(CASE WHEN m.status = 'lulus' THEN 1 END) as lulus,
-                COUNT(CASE WHEN m.gpa < 2.5 AND m.gpa IS NOT NULL THEN 1 END) as berisiko
+                COUNT(CASE WHEN m.ipk < 2.5 AND m.ipk IS NOT NULL THEN 1 END) as berisiko
             FROM mahasiswa m
             WHERE 1=1
             ${filter}
