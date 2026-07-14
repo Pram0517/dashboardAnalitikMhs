@@ -233,7 +233,6 @@ if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
       width: 100%;
       border-collapse: collapse;
       font-size: 13.5px;
-      table-layout: fixed;
     }
     .es-table thead tr {
       background: linear-gradient(90deg, rgba(6,68,107,0.04) 0%, rgba(156,205,219,0.08) 100%);
@@ -260,7 +259,6 @@ if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
       padding: 14px 20px;
       color: var(--col-navy);
       vertical-align: middle;
-      word-break: break-word;
     }
     .es-nim {
       font-family: 'Poppins', sans-serif;
@@ -633,20 +631,6 @@ if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
       font-size: 11px;
       padding: 3px 10px;
     }
-
-    /* Filter label style */
-    .filter-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--col-navy);
-      margin-right: 2px;
-    }
-
-    .filter-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
   `;
   document.head.appendChild(style);
 }
@@ -709,7 +693,7 @@ const EvaluasiStudi = () => {
   useEffect(() => {
     fetchEvaluasi();
     fetchDashboardStats();
-  }, [pagination.page, filterStatus, filterAngkatan, debouncedSearchTerm]);
+  }, [pagination.page, filterStatus, filterAngkatan]);
 
   // ====== HELPER FUNCTION UNTUK FORMAT IPK ======
   const formatIpk = (ipk) => {
@@ -835,61 +819,52 @@ const EvaluasiStudi = () => {
 
   // ====== FETCH DATA EVALUASI ======
   const fetchEvaluasi = async () => {
-  try {
-    setLoading(true);
-    setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-    let response;
-    
-    if (user?.role === 'mahasiswa' && user?.nim) {
-      response = await evaluasiService.getByNimWithDetails(user.nim);
-      setEvaluasiList(response.data ? [response.data] : []);
-      setPagination({
-        page: 1,
-        limit: 10,
-        total: 1,
-        pages: 1
-      });
-    } else {
-      // ✅ KIRIM SEMUA FILTER KE API
-      console.log('📤 Fetching with filters:', {
-        page: pagination.page,
-        limit: pagination.limit,
-        search: debouncedSearchTerm,
-        filterStatus: filterStatus,
-        filterAngkatan: filterAngkatan
-      });
+      let response;
       
-      response = await evaluasiService.getAllWithDetails(
-        pagination.page,
-        pagination.limit,
-        debouncedSearchTerm,
-        filterStatus,
-        filterAngkatan
-      );
-      
-      console.log('📥 Response from API:', response);
-      setEvaluasiList(response.data || []);
-      setPagination({
-        page: pagination.page,
-        limit: pagination.limit,
-        total: response.pagination?.total || 0,
-        pages: response.pagination?.pages || 0
-      });
+      if (user?.role === 'mahasiswa' && user?.nim) {
+        response = await evaluasiService.getByNimWithDetails(user.nim);
+        setEvaluasiList(response.data ? [response.data] : []);
+        setPagination({
+          page: 1,
+          limit: 10,
+          total: 1,
+          pages: 1
+        });
+      } else {
+        response = await evaluasiService.getAllWithDetails(
+          pagination.page,
+          pagination.limit,
+          debouncedSearchTerm,
+          filterStatus
+        );
+        setEvaluasiList(response.data || []);
+        setPagination({
+          page: pagination.page,
+          limit: pagination.limit,
+          total: response.pagination?.total || 0,
+          pages: response.pagination?.pages || 0
+        });
+      }
+
+      if (user?.role === 'admin' || user?.role === 'kaprodi') {
+        try {
+          const summaryRes = await evaluasiService.getSummary();
+          setSummary(summaryRes.data);
+        } catch (summaryErr) {
+          console.warn('Summary not available:', summaryErr);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching evaluasi:', err);
+      setError(err.message || 'Gagal mengambil data evaluasi');
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error('Error fetching evaluasi:', err);
-    setError(err.message || 'Gagal mengambil data evaluasi');
-  } finally {
-    setLoading(false);
-  }
-};
-
-// ====== EFFECT UNTUK FETCH DATA ======
-useEffect(() => {
-  fetchEvaluasi();
-  fetchDashboardStats();
-}, [pagination.page, filterStatus, filterAngkatan, debouncedSearchTerm]); 
+  };
 
   // ====== FUNGSI UNTUK MENGAMBIL DATA DASHBOARD ======
   const fetchDashboardStats = async () => {
@@ -940,6 +915,7 @@ useEffect(() => {
 
   // ====== FUNGSI UNTUK MENGAMBIL MATA KULIAH ======
   const fetchMataKuliah = async (nim, mahasiswaName, semester = null) => {
+    // ✅ VALIDASI NIM
     if (!nim || nim === 'undefined' || nim === 'null') {
       toast.error('NIM tidak valid');
       console.error('❌ Invalid NIM:', nim);
@@ -1037,6 +1013,19 @@ useEffect(() => {
       setLoading(false);
     }
   };
+
+  // ====== DATA YANG DITAMPILKAN ======
+  const filteredData = evaluasiList.filter((item) => {
+    const matchStatus = filterStatus === 'Semua' || item.status === filterStatus;
+    const matchAngkatan = filterAngkatan === 'Semua Angkatan' || item.angkatan?.toString() === filterAngkatan;
+
+    const keyword = debouncedSearchTerm.trim().toLowerCase();
+    const nama = (item.nama_lengkap || item.nama || '').toLowerCase();
+    const nim = (item.npm || item.nim || '').toString().toLowerCase();
+    const matchSearch = keyword === '' || nama.includes(keyword) || nim.includes(keyword);
+
+    return matchStatus && matchAngkatan && matchSearch;
+  });
 
   // ====== STAT CARDS ======
   const totalMahasiswa = dashboardStats?.totalMahasiswa || evaluasiList.length || 0;
@@ -1176,7 +1165,7 @@ useEffect(() => {
 
         {/* Toolbar */}
         <div className="es-toolbar">
-          <div style={{ display:'flex', gap:'12px', flexWrap:'wrap', flex:1, alignItems:'center' }}>
+          <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', flex:1, alignItems:'center' }}>
             
             {/* Search box */}
             <div className="es-search-wrap">
@@ -1190,29 +1179,22 @@ useEffect(() => {
               />
             </div>
 
-            {/* Filter Status */}
-            <div className="filter-group">
-              <span className="filter-label">Status:</span>
+            {/* Filter controls */}
+            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+              <Filter size={15} style={{ color:'var(--col-blue)', flexShrink:0 }} />
               <select
                 className="es-select"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                style={{ minWidth: '130px' }}
               >
                 {statusOptions.map(status => (
                   <option key={status} value={status}>{status}</option>
                 ))}
               </select>
-            </div>
-
-            {/* Filter Angkatan */}
-            <div className="filter-group">
-              <span className="filter-label">Angkatan:</span>
               <select
                 className="es-select"
                 value={filterAngkatan}
                 onChange={(e) => setFilterAngkatan(e.target.value)}
-                style={{ minWidth: '130px' }}
               >
                 {angkatanOptions.map(angkatan => (
                   <option key={angkatan} value={angkatan}>{angkatan}</option>
@@ -1223,7 +1205,7 @@ useEffect(() => {
           
           {/* Results count */}
           <span style={{ fontSize:'12px', color:'var(--col-blue)', fontWeight:500, whiteSpace:'nowrap' }}>
-            {isSearching ? 'Mencari...' : `${evaluasiList.length} hasil ditemukan`}
+            {isSearching ? 'Mencari...' : `${filteredData.length} hasil ditemukan`}
           </span>
         </div>
 
@@ -1232,18 +1214,18 @@ useEffect(() => {
           <table className="es-table">
             <thead>
               <tr>
-                <th style={{ width: '15%', minWidth: '120px' }}>NIM</th>
-                <th style={{ width: '25%', minWidth: '180px' }}>Nama Mahasiswa</th>
-                <th style={{ width: '10%', minWidth: '80px', textAlign: 'center' }}>Angkatan</th>
-                <th style={{ width: '10%', minWidth: '70px', textAlign: 'center' }}>IPK</th>
-                <th style={{ width: '10%', minWidth: '60px', textAlign: 'center' }}>SKS</th>
-                <th style={{ width: '18%', minWidth: '130px' }}>Status</th>
-                <th style={{ width: '12%', minWidth: '120px', textAlign: 'center' }}>Aksi</th>
+                <th>NIM</th>
+                <th>Nama Mahasiswa</th>
+                <th className="es-center">Angkatan</th>
+                <th className="es-center">IPK</th>
+                <th className="es-center">SKS</th>
+                <th>Status</th>
+                <th className="es-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {evaluasiList.length > 0 ? (
-                evaluasiList.map((mhs, index) => {
+              {filteredData.length > 0 ? (
+                filteredData.map((mhs, index) => {
                   const ipk = parseFloat(mhs.ipk) || 0;
                   const semester = parseInt(mhs.semester) || 1;
                   const totalSks = parseInt(mhs.total_sks) || 0;
@@ -1263,12 +1245,9 @@ useEffect(() => {
                   
                   return (
                     <tr key={mhs.id || index}>
-                      <td>
-                        <span className="es-nim">{mhs.npm || mhs.nim || '-'}</span>
-                      </td>
-                      <td>
-                        <span className="es-name">{mhs.nama_lengkap || mhs.nama || '-'}</span>
-                      </td>
+                      {/* ✅ PAKAI npm atau nim */}
+                      <td><span className="es-nim">{mhs.npm || mhs.nim || '-'}</span></td>
+                      <td><span className="es-name">{mhs.nama_lengkap || mhs.nama || '-'}</span></td>
                       <td className="es-center" style={{ fontSize:'13px', fontWeight:600 }}>
                         {mhs.angkatan || '-'}
                       </td>
@@ -1335,7 +1314,7 @@ useEffect(() => {
         {/* Pagination */}
         <div className="es-pagination">
           <span className="es-page-info">
-            Menampilkan <strong>{evaluasiList.length}</strong> dari <strong>{pagination.total || evaluasiList.length}</strong> mahasiswa
+            Menampilkan <strong>{filteredData.length}</strong> dari <strong>{pagination.total || evaluasiList.length}</strong> mahasiswa
           </span>
           <div className="es-page-btns">
             <button 

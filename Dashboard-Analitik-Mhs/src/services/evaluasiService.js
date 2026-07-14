@@ -40,33 +40,29 @@ export const evaluasiService = {
   },
 
   // ====== GET ALL MAHASISWA WITH DETAILS (ANGKATAN & SKS) ======
-getAllWithDetails: async (page = 1, limit = 10, search = '', filterStatus = '', filterAngkatan = '') => {
-  const token = localStorage.getItem('token');
-  const url = new URL(`${API_URL}/mahasiswa/with-details`);
-  url.searchParams.append('page', page);
-  url.searchParams.append('limit', limit);
-  if (search) url.searchParams.append('search', search);
-  if (filterStatus && filterStatus !== 'Semua') url.searchParams.append('filterStatus', filterStatus);
-  if (filterAngkatan && filterAngkatan !== 'Semua Angkatan') url.searchParams.append('filterAngkatan', filterAngkatan);
+  getAllWithDetails: async (page = 1, limit = 10, search = '', filterStatus = '') => {
+    const token = localStorage.getItem('token');
+    const url = new URL(`${API_URL}/mahasiswa/with-details`);
+    url.searchParams.append('page', page);
+    url.searchParams.append('limit', limit);
+    if (search) url.searchParams.append('search', search);
+    if (filterStatus && filterStatus !== 'Semua') url.searchParams.append('filterStatus', filterStatus);
 
-  console.log('📤 Fetching with filters:', { page, limit, search, filterStatus, filterAngkatan });
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Gagal mengambil data mahasiswa');
     }
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Gagal mengambil data mahasiswa');
-  }
-  
-  const data = await response.json();
-  console.log('📥 Response data:', data);
-  return data;
-},
+    
+    const data = await response.json();
+    return data;
+  },
 
   // ====== GET MAHASISWA BY NIM WITH DETAILS ======
   getByNimWithDetails: async (nim) => {
