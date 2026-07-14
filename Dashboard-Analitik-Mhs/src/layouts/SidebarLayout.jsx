@@ -37,7 +37,7 @@ const SidebarLayout = () => {
     { name: 'Evaluasi Studi', path: '/evaluasi-studi', icon: AlertTriangle, roles: ['admin', 'kaprodi'] },
     { name: 'Capstone', path: '/capstone', icon: GraduationCap, roles: ['admin', 'kaprodi'] },
     { name: 'Skripsi', path: '/skripsi', icon: FileText, roles: ['admin', 'kaprodi'] },
-    { name: 'Dosen Skripsi', path: '/dosen-skripsi', icon: UserCheck, roles: ['admin', 'kaprodi'] },
+    { name: 'Dosen Pembimbing', path: '/dosen-skripsi', icon: UserCheck, roles: ['admin', 'kaprodi'] },
     { name: 'Kurikulum', path: '/kurikulum', icon: BookOpen, roles: ['admin'] },
     { name: 'Pengaturan', path: '/settings', icon: Settings, roles: ['admin', 'kaprodi', 'mahasiswa'] },
   ];
