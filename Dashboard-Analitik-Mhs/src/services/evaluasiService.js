@@ -40,7 +40,6 @@ export const evaluasiService = {
   },
 
   // ====== GET ALL MAHASISWA WITH DETAILS (ANGKATAN & SKS) ======
-  // ====== GET ALL MAHASISWA WITH DETAILS (ANGKATAN & SKS) ======
 getAllWithDetails: async (page = 1, limit = 10, search = '', filterStatus = '', filterAngkatan = '') => {
   const token = localStorage.getItem('token');
   const url = new URL(`${API_URL}/mahasiswa/with-details`);
@@ -48,7 +47,9 @@ getAllWithDetails: async (page = 1, limit = 10, search = '', filterStatus = '', 
   url.searchParams.append('limit', limit);
   if (search) url.searchParams.append('search', search);
   if (filterStatus && filterStatus !== 'Semua') url.searchParams.append('filterStatus', filterStatus);
-  if (filterAngkatan && filterAngkatan !== 'Semua Angkatan') url.searchParams.append('filterAngkatan', filterAngkatan); // ✅ TAMBAHKAN
+  if (filterAngkatan && filterAngkatan !== 'Semua Angkatan') url.searchParams.append('filterAngkatan', filterAngkatan);
+
+  console.log('📤 Fetching with filters:', { page, limit, search, filterStatus, filterAngkatan });
 
   const response = await fetch(url, {
     headers: {
@@ -63,6 +64,7 @@ getAllWithDetails: async (page = 1, limit = 10, search = '', filterStatus = '', 
   }
   
   const data = await response.json();
+  console.log('📥 Response data:', data);
   return data;
 },
 

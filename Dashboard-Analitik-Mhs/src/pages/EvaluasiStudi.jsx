@@ -835,54 +835,61 @@ const EvaluasiStudi = () => {
 
   // ====== FETCH DATA EVALUASI ======
   const fetchEvaluasi = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-      let response;
+    let response;
+    
+    if (user?.role === 'mahasiswa' && user?.nim) {
+      response = await evaluasiService.getByNimWithDetails(user.nim);
+      setEvaluasiList(response.data ? [response.data] : []);
+      setPagination({
+        page: 1,
+        limit: 10,
+        total: 1,
+        pages: 1
+      });
+    } else {
+      // ✅ KIRIM SEMUA FILTER KE API
+      console.log('📤 Fetching with filters:', {
+        page: pagination.page,
+        limit: pagination.limit,
+        search: debouncedSearchTerm,
+        filterStatus: filterStatus,
+        filterAngkatan: filterAngkatan
+      });
       
-      if (user?.role === 'mahasiswa' && user?.nim) {
-        response = await evaluasiService.getByNimWithDetails(user.nim);
-        setEvaluasiList(response.data ? [response.data] : []);
-        setPagination({
-          page: 1,
-          limit: 10,
-          total: 1,
-          pages: 1
-        });
-      } else {
-        // ✅ KIRIM FILTER KE API
-        response = await evaluasiService.getAllWithDetails(
-          pagination.page,
-          pagination.limit,
-          debouncedSearchTerm,
-          filterStatus,
-          filterAngkatan
-        );
-        setEvaluasiList(response.data || []);
-        setPagination({
-          page: pagination.page,
-          limit: pagination.limit,
-          total: response.pagination?.total || 0,
-          pages: response.pagination?.pages || 0
-        });
-      }
-
-      if (user?.role === 'admin' || user?.role === 'kaprodi') {
-        try {
-          const summaryRes = await evaluasiService.getSummary();
-          setSummary(summaryRes.data);
-        } catch (summaryErr) {
-          console.warn('Summary not available:', summaryErr);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching evaluasi:', err);
-      setError(err.message || 'Gagal mengambil data evaluasi');
-    } finally {
-      setLoading(false);
+      response = await evaluasiService.getAllWithDetails(
+        pagination.page,
+        pagination.limit,
+        debouncedSearchTerm,
+        filterStatus,
+        filterAngkatan
+      );
+      
+      console.log('📥 Response from API:', response);
+      setEvaluasiList(response.data || []);
+      setPagination({
+        page: pagination.page,
+        limit: pagination.limit,
+        total: response.pagination?.total || 0,
+        pages: response.pagination?.pages || 0
+      });
     }
-  };
+  } catch (err) {
+    console.error('Error fetching evaluasi:', err);
+    setError(err.message || 'Gagal mengambil data evaluasi');
+  } finally {
+    setLoading(false);
+  }
+};
+
+// ====== EFFECT UNTUK FETCH DATA ======
+useEffect(() => {
+  fetchEvaluasi();
+  fetchDashboardStats();
+}, [pagination.page, filterStatus, filterAngkatan, debouncedSearchTerm]); 
 
   // ====== FUNGSI UNTUK MENGAMBIL DATA DASHBOARD ======
   const fetchDashboardStats = async () => {
