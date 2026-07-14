@@ -22,6 +22,8 @@ export const AuthProvider = ({ children }) => {
             const token = localStorage.getItem('token');
             const savedUser = localStorage.getItem('uad_user');
             
+            console.log('🔍 Checking session:', { token: !!token, savedUser: !!savedUser });
+            
             if (token && savedUser) {
                 try {
                     // Verifikasi token ke backend
@@ -60,52 +62,51 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     // ============ LOGIN ============
-    // ============ LOGIN ============
-const login = async (username, password) => {
-    try {
-        console.log('🔐 AuthContext login called with:', { username, password: '***' });
-        
-        const result = await authService.login(username, password);
-        console.log('🔍 Login result from service:', result);
-        
-        if (result && result.token && result.user) {
-            const userData = result.user;
+    const login = async (username, password) => {
+        try {
+            console.log('🔐 AuthContext login called with:', { username, password: '***' });
             
-            // Format user data sesuai kebutuhan frontend
-            const formattedUser = {
-                id: userData.id,
-                name: userData.name || userData.nama_lengkap,
-                email: userData.email,
-                role: userData.role,
-                nim: userData.nim || userData.npm || null,
-                mahasiswa_id: userData.mahasiswa_id || null,
-                nama_lengkap: userData.nama_lengkap || userData.name || null,
-                semester: userData.semester || 1,
-                gpa: userData.gpa || null,
-                mahasiswa_status: userData.mahasiswa_status || 'aktif',
-                angkatan: userData.angkatan || null,
-                npm: userData.npm || null
-            };
+            const result = await authService.login(username, password);
+            console.log('🔍 Login result from service:', result);
             
-            console.log('✅ Formatted user:', formattedUser);
+            if (result && result.token && result.user) {
+                const userData = result.user;
+                
+                // Format user data sesuai kebutuhan frontend
+                const formattedUser = {
+                    id: userData.id,
+                    name: userData.name || userData.nama_lengkap,
+                    email: userData.email,
+                    role: userData.role,
+                    nim: userData.nim || userData.npm || null,
+                    mahasiswa_id: userData.mahasiswa_id || null,
+                    nama_lengkap: userData.nama_lengkap || userData.name || null,
+                    semester: userData.semester || 1,
+                    gpa: userData.gpa || null,
+                    mahasiswa_status: userData.mahasiswa_status || 'aktif',
+                    angkatan: userData.angkatan || null,
+                    npm: userData.npm || null
+                };
+                
+                console.log('✅ Formatted user:', formattedUser);
+                
+                // Simpan token dan user data
+                localStorage.setItem('token', result.token);
+                localStorage.setItem('uad_user', JSON.stringify(formattedUser));
+                
+                setUser(formattedUser);
+                toast.success(`Selamat datang, ${formattedUser.name}!`);
+                return formattedUser;
+            }
             
-            // Simpan token dan user data
-            localStorage.setItem('token', result.token);
-            localStorage.setItem('uad_user', JSON.stringify(formattedUser));
+            throw new Error('Login gagal: data tidak lengkap');
             
-            setUser(formattedUser);
-            toast.success(`Selamat datang, ${formattedUser.name}!`);
-            return formattedUser;
+        } catch (error) {
+            console.error('❌ Login error in context:', error);
+            toast.error(error.message || 'Login gagal');
+            return null;
         }
-        
-        throw new Error('Login gagal: data tidak lengkap');
-        
-    } catch (error) {
-        console.error('❌ Login error in context:', error);
-        toast.error(error.message || 'Login gagal');
-        return null;
-    }
-};
+    };
 
     // ============ LOGOUT ============
     const logout = async () => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -6,7 +6,6 @@ import {
   Upload, 
   AlertTriangle, 
   GraduationCap, 
-  // Users, 
   Settings, 
   LogOut,
   Menu,
@@ -14,22 +13,25 @@ import {
   BookOpen,
   FileText,
   UserCheck,
-  User
+  User,
+  Loader
 } from 'lucide-react';
 import logoUAD from '../assets/logo-uad.png';
 
-// ============ [LAYOUT SECTION] ============
-// [KOMPONEN] SidebarLayout - Layout utama aplikasi dengan Sidebar navigasi dan area konten
-
 const SidebarLayout = () => {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // ✅ Debug: Cek user state
+  useEffect(() => {
+    console.log('🔍 SidebarLayout - User:', user);
+    console.log('🔍 SidebarLayout - Loading:', loading);
+  }, [user, loading]);
 
   const navItems = [
     { name: 'Data Saya', path: '/mahasiswa/self', icon: User, roles: ['mahasiswa'] },
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'kaprodi'] },
-    // { name: 'Upload KHS', path: '/upload', icon: Upload, roles: ['mahasiswa'] },
     { name: 'Evaluasi Studi', path: '/evaluasi-studi', icon: AlertTriangle, roles: ['admin', 'kaprodi'] },
     { name: 'Capstone', path: '/capstone', icon: GraduationCap, roles: ['admin', 'kaprodi'] },
     { name: 'Skripsi', path: '/skripsi', icon: FileText, roles: ['admin', 'kaprodi'] },
@@ -38,7 +40,25 @@ const SidebarLayout = () => {
     { name: 'Pengaturan', path: '/settings', icon: Settings, roles: ['admin', 'kaprodi', 'mahasiswa'] },
   ];
 
-  const filteredNavItems = navItems.filter(item => item.roles.includes(user?.role));
+  // ✅ Filter navItems berdasarkan role user
+  const filteredNavItems = user?.role 
+    ? navItems.filter(item => item.roles.includes(user.role))
+    : [];
+
+  // ✅ Handle loading state
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <Loader size={40} className="animate-spin text-accent2" />
+      </div>
+    );
+  }
+
+  // ✅ Jika tidak ada user, redirect ke login
+  if (!user) {
+    navigate('/login');
+    return null;
+  }
 
   const handleLogout = () => {
     logout();
@@ -62,35 +82,39 @@ const SidebarLayout = () => {
         fixed md:static inset-y-0 left-0 z-40
         w-64 bg-accent2 text-white flex flex-col shadow-xl
       `}>
-        {/* ========Logo Area======== */}
+        {/* Logo Area */}
         <div className="p-6 flex justify-center items-center border-b border-white/10">
           <img src={logoUAD} alt="Logo UAD" className="h-20 w-auto object-contain bg-white-0 p-0 rounded-lg" />
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {filteredNavItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={({ isActive }) => `
-                flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200
-                ${isActive ? 'bg-accent1 text-white font-medium shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}
-              `}
-            >
-              <item.icon size={20} />
-              <span>{item.name}</span>
-            </NavLink>
-          ))}
+          {filteredNavItems.length > 0 ? (
+            filteredNavItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) => `
+                  flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200
+                  ${isActive ? 'bg-accent1 text-white font-medium shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}
+                `}
+              >
+                <item.icon size={20} />
+                <span>{item.name}</span>
+              </NavLink>
+            ))
+          ) : (
+            <div className="text-white/50 text-sm text-center py-4">No menu available</div>
+          )}
         </nav>
 
         {/* User Info & Logout */}
         <div className="p-4 border-t border-white/10 bg-black/10">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-sm font-semibold truncate w-32">{user?.name}</span>
-              <span className="text-xs text-white/60">{user?.role}</span>
+              <span className="text-sm font-semibold truncate w-32">{user?.name || 'User'}</span>
+              <span className="text-xs text-white/60">{user?.role || 'Unknown'}</span>
             </div>
             <button 
               onClick={handleLogout}
@@ -105,9 +129,8 @@ const SidebarLayout = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Header - visible mostly on mobile for padding, or for global actions */}
         <header className="h-16 bg-primary border-b border-secondary/20 flex items-center justify-end px-6 shadow-sm md:hidden">
-            {/* Empty space for mobile menu toggle */}
+          {/* Empty space for mobile menu toggle */}
         </header>
 
         {/* Dynamic Content */}
