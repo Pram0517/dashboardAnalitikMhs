@@ -34,7 +34,603 @@ if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
       min-height: 100%;
     }
 
-    /* ... semua style lainnya tetap sama ... */
+    .es-root {
+      animation: esPageReveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes esPageReveal {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .es-root .es-stagger > * {
+      animation: esSlideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .es-root .es-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+    .es-root .es-stagger > *:nth-child(2) { animation-delay: 0.12s; }
+    .es-root .es-stagger > *:nth-child(3) { animation-delay: 0.19s; }
+    .es-root .es-stagger > *:nth-child(4) { animation-delay: 0.26s; }
+    @keyframes esSlideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .es-stat-card {
+      background: var(--col-surface);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid var(--col-border);
+      border-radius: 20px;
+      box-shadow: var(--shadow-card);
+      padding: 20px 22px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      transition: box-shadow 0.28s ease, transform 0.28s ease;
+      cursor: default;
+    }
+    .es-stat-card:hover {
+      box-shadow: var(--shadow-elevated);
+      transform: translateY(-3px);
+    }
+    .es-stat-icon {
+      width: 44px; height: 44px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .es-stat-val {
+      font-family: 'Poppins', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--col-navy);
+      letter-spacing: -0.5px;
+    }
+    .es-stat-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--col-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 3px;
+    }
+    .es-stat-trend {
+      margin-top: 6px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #16a34a;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .es-main-card {
+      background: var(--col-surface);
+      backdrop-filter: blur(20px) saturate(200%);
+      -webkit-backdrop-filter: blur(20px) saturate(200%);
+      border: 1px solid var(--col-border);
+      border-radius: 24px;
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .es-toolbar {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--col-border);
+      background: rgba(255,255,255,0.6);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .es-search-wrap {
+      position: relative;
+      max-width: 300px;
+      width: 100%;
+    }
+    .es-search-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--col-blue);
+      pointer-events: none;
+    }
+    .es-input {
+      width: 100%;
+      background: rgba(156,205,219,0.12);
+      border: 1.5px solid var(--col-border-strong);
+      border-radius: 12px;
+      padding: 9px 12px 9px 38px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13.5px;
+      color: var(--col-navy);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .es-input::placeholder { color: var(--col-blue); opacity: 0.7; }
+    .es-input:focus {
+      border-color: var(--col-blue);
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 0 3px rgba(87,144,171,0.14);
+    }
+    .es-select {
+      background: rgba(156,205,219,0.12);
+      border: 1.5px solid var(--col-border-strong);
+      border-radius: 12px;
+      padding: 9px 36px 9px 12px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13.5px;
+      color: var(--col-navy);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235790AB' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+    }
+    .es-select:focus {
+      border-color: var(--col-blue);
+      box-shadow: 0 0 0 3px rgba(87,144,171,0.14);
+      background-color: rgba(255,255,255,0.9);
+    }
+
+    .es-btn-export {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: 11px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid var(--col-border-strong);
+      background: rgba(255,255,255,0.7);
+      color: var(--col-navy);
+      transition: all 0.22s ease;
+      letter-spacing: 0.1px;
+    }
+    .es-btn-export:hover {
+      background: var(--col-navy);
+      border-color: var(--col-navy);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(6,68,107,0.22);
+      transform: translateY(-1px);
+    }
+    .es-btn-export:active { transform: scale(0.97); }
+
+    .es-btn-view-mk {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid var(--col-border-strong);
+      background: rgba(156,205,219,0.15);
+      color: var(--col-navy);
+      transition: all 0.2s ease;
+    }
+    .es-btn-view-mk:hover {
+      background: var(--col-navy);
+      border-color: var(--col-navy);
+      color: #fff;
+    }
+
+    .es-table-wrap {
+      overflow-x: auto;
+      flex: 1;
+    }
+    .es-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    .es-table thead tr {
+      background: linear-gradient(90deg, rgba(6,68,107,0.04) 0%, rgba(156,205,219,0.08) 100%);
+    }
+    .es-table thead th {
+      padding: 14px 20px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13.5px;
+      font-weight: 600;
+      text-align: left;
+      color: var(--col-blue);
+      white-space: nowrap;
+      border-bottom: 1px solid var(--col-border);
+    }
+    .es-table tbody tr {
+      border-bottom: 1px solid rgba(87,144,171,0.09);
+      transition: background 0.18s ease;
+    }
+    .es-table tbody tr:hover {
+      background: rgba(156,205,219,0.12);
+    }
+    .es-table tbody tr:last-child { border-bottom: none; }
+    .es-table td {
+      padding: 14px 20px;
+      color: var(--col-navy);
+      vertical-align: middle;
+    }
+    .es-nim {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 12.5px;
+      letter-spacing: 0.3px;
+      color: var(--col-navy);
+    }
+    .es-name {
+      font-weight: 500;
+      color: #1e3a4f;
+    }
+    .es-center { text-align: center !important; }
+    .es-right { text-align: right !important; }
+    .es-ipk {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .es-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+    .es-badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .es-badge-aktif { background: #dcfce7; color: #15803d; border: 1px solid rgba(22,163,74,0.2); }
+    .es-badge-aktif .es-badge-dot { background: #16a34a; }
+    .es-badge-nonaktif { background: #fee2e2; color: #b91c1c; border: 1px solid rgba(220,38,38,0.2); }
+    .es-badge-nonaktif .es-badge-dot { background: #dc2626; }
+    .es-badge-es1 { background: #fef9c3; color: #a16207; border: 1px solid rgba(234,179,8,0.2); }
+    .es-badge-es1 .es-badge-dot { background: #eab308; }
+    .es-badge-es2 { background: #fef9c3; color: #a16207; border: 1px solid rgba(234,179,8,0.2); }
+    .es-badge-es2 .es-badge-dot { background: #eab308; }
+    .es-badge-es3 { background: #fee2e2; color: #b91c1c; border: 1px solid rgba(220,38,38,0.2); }
+    .es-badge-es3 .es-badge-dot { background: #dc2626; }
+    .es-badge-gugur { background: #fef2f2; color: #991b1b; border: 1px solid rgba(220,38,38,0.3); }
+    .es-badge-gugur .es-badge-dot { background: #991b1b; }
+    .es-badge-belum { background: #f3f4f6; color: #4b5563; border: 1px solid rgba(156,163,175,0.2); }
+    .es-badge-belum .es-badge-dot { background: #9ca3af; }
+    .es-badge-berisiko { background: #fef9c3; color: #a16207; border: 1px solid rgba(234,179,8,0.2); }
+    .es-badge-berisiko .es-badge-dot { background: #eab308; }
+    .es-badge-evaluasi { background: #fee2e2; color: #b91c1c; border: 1px solid rgba(220,38,38,0.2); }
+    .es-badge-evaluasi .es-badge-dot { background: #dc2626; }
+    .es-badge-lulus { background: #dcfce7; color: #15803d; border: 1px solid rgba(22,163,74,0.2); }
+    .es-badge-lulus .es-badge-dot { background: #16a34a; }
+
+    .es-detail-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--col-blue);
+      background: rgba(87,144,171,0.08);
+      border: 1px solid var(--col-border-strong);
+      text-decoration: none;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .es-detail-link:hover {
+      background: var(--col-navy);
+      color: #fff;
+      border-color: var(--col-navy);
+      box-shadow: 0 4px 12px rgba(6,68,107,0.18);
+      transform: translateY(-1px);
+    }
+    .es-detail-link svg { transition: transform 0.2s; }
+    .es-detail-link:hover svg { transform: translate(2px, -2px); }
+
+    .es-empty {
+      padding: 64px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: var(--col-blue);
+    }
+    .es-empty-icon {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: rgba(156,205,219,0.15);
+      border: 2px dashed rgba(87,144,171,0.3);
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(87,144,171,0.6);
+      margin-bottom: 4px;
+    }
+
+    .es-pagination {
+      padding: 14px 24px;
+      border-top: 1px solid var(--col-border);
+      background: rgba(255,255,255,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .es-page-info {
+      font-size: 12.5px;
+      color: var(--col-blue);
+      font-weight: 500;
+    }
+    .es-page-info strong {
+      color: var(--col-navy);
+      font-weight: 700;
+    }
+    .es-page-btns {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .es-page-btn {
+      width: 32px; height: 32px;
+      border-radius: 9px;
+      border: 1.5px solid var(--col-border-strong);
+      background: rgba(255,255,255,0.7);
+      color: var(--col-navy);
+      font-size: 12px;
+      font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.18s;
+      font-family: 'Poppins', sans-serif;
+    }
+    .es-page-btn:hover:not(:disabled) {
+      background: var(--col-blue);
+      border-color: var(--col-blue);
+      color: #fff;
+    }
+    .es-page-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .es-page-btn.active {
+      background: var(--col-navy);
+      border-color: var(--col-navy);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(6,68,107,0.25);
+    }
+
+    .es-page-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--col-navy);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+    .es-page-sub {
+      font-size: 13.5px;
+      color: var(--col-blue);
+      margin-top: 4px;
+      font-weight: 400;
+    }
+    .es-title-pill {
+      display: inline-block;
+      background: linear-gradient(135deg, rgba(156,205,219,0.3) 0%, rgba(87,144,171,0.15) 100%);
+      border: 1px solid rgba(87,144,171,0.25);
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--col-blue);
+      margin-bottom: 6px;
+    }
+
+    .es-table tbody tr {
+      animation: esRowIn 0.35s ease both;
+    }
+    @keyframes esRowIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .es-header-line {
+      width: 40px;
+      height: 3px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--col-blue), var(--col-teal));
+      margin-top: 8px;
+    }
+
+    .es-ipk-high { color: #15803d; }
+    .es-ipk-mid  { color: var(--col-navy); }
+    .es-ipk-low  { color: #b91c1c; }
+
+    .es-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: esFadeIn 0.25s ease;
+    }
+    @keyframes esFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .es-modal {
+      background: white;
+      border-radius: 24px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 85vh;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+      animation: esModalSlide 0.3s ease;
+    }
+    @keyframes esModalSlide {
+      from { transform: scale(0.95) translateY(20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .es-modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--col-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--col-surface);
+    }
+    .es-modal-header h2 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--col-navy);
+    }
+    .es-modal-header .sub {
+      font-size: 13px;
+      color: var(--col-blue);
+      font-weight: 500;
+    }
+    .es-modal-close {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(87,144,171,0.1);
+      color: var(--col-navy);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .es-modal-close:hover {
+      background: var(--col-navy);
+      color: white;
+    }
+    .es-modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      max-height: calc(85vh - 140px);
+    }
+    .es-modal-body table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .es-modal-body thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--col-blue);
+      border-bottom: 2px solid var(--col-border);
+      background: rgba(156,205,219,0.06);
+    }
+    .es-modal-body tbody td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(87,144,171,0.08);
+      color: var(--col-navy);
+    }
+    .es-modal-body tbody tr:hover {
+      background: rgba(156,205,219,0.08);
+    }
+    .es-modal-body .mk-kode {
+      font-weight: 600;
+      color: var(--col-navy);
+    }
+    .es-modal-body .mk-sks {
+      text-align: center;
+      font-weight: 600;
+    }
+    .es-modal-body .mk-semester {
+      text-align: center;
+    }
+    .es-modal-body .mk-nilai {
+      text-align: center;
+      font-weight: 700;
+    }
+    .es-nilai-lulus { color: #15803d; }
+    .es-nilai-tidak { color: #b91c1c; }
+    .es-nilai-belum { color: #9ca3af; }
+
+    .es-modal-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: rgba(156,205,219,0.08);
+      border-radius: 12px;
+    }
+    .es-modal-summary-item {
+      text-align: center;
+    }
+    .es-modal-summary-item .label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--col-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .es-modal-summary-item .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--col-navy);
+    }
+
+    .es-filter-semester {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .es-filter-semester button {
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--col-border-strong);
+      background: transparent;
+      color: var(--col-navy);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Poppins', sans-serif;
+    }
+    .es-filter-semester button:hover {
+      background: rgba(156,205,219,0.15);
+    }
+    .es-filter-semester button.active {
+      background: var(--col-navy);
+      border-color: var(--col-navy);
+      color: white;
+    }
+
+    .status-badge-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-start;
+    }
+    .status-badge-container .es-badge {
+      font-size: 11px;
+      padding: 3px 10px;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -319,6 +915,7 @@ const EvaluasiStudi = () => {
 
   // ====== FUNGSI UNTUK MENGAMBIL MATA KULIAH ======
   const fetchMataKuliah = async (nim, mahasiswaName, semester = null) => {
+    // ✅ VALIDASI NIM
     if (!nim || nim === 'undefined' || nim === 'null') {
       toast.error('NIM tidak valid');
       console.error('❌ Invalid NIM:', nim);
@@ -566,9 +1163,9 @@ const EvaluasiStudi = () => {
       {/* Main table card */}
       <div className="es-main-card">
 
-        {/* Toolbar - ✅ DIPERBAIKI: Filter dipisah per kolom */}
+        {/* Toolbar */}
         <div className="es-toolbar">
-          <div style={{ display:'flex', gap:'12px', flexWrap:'wrap', flex:1, alignItems:'center' }}>
+          <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', flex:1, alignItems:'center' }}>
             
             {/* Search box */}
             <div className="es-search-wrap">
@@ -582,29 +1179,22 @@ const EvaluasiStudi = () => {
               />
             </div>
 
-            {/* ✅ FILTER STATUS - label terpisah */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#06446B' }}>Status:</span>
+            {/* Filter controls */}
+            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+              <Filter size={15} style={{ color:'var(--col-blue)', flexShrink:0 }} />
               <select
                 className="es-select"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                style={{ minWidth: '130px' }}
               >
                 {statusOptions.map(status => (
                   <option key={status} value={status}>{status}</option>
                 ))}
               </select>
-            </div>
-
-            {/* ✅ FILTER ANGKATAN - label terpisah */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#06446B' }}>Angkatan:</span>
               <select
                 className="es-select"
                 value={filterAngkatan}
                 onChange={(e) => setFilterAngkatan(e.target.value)}
-                style={{ minWidth: '130px' }}
               >
                 {angkatanOptions.map(angkatan => (
                   <option key={angkatan} value={angkatan}>{angkatan}</option>
@@ -619,18 +1209,18 @@ const EvaluasiStudi = () => {
           </span>
         </div>
 
-        {/* Table - ✅ DIPERBAIKI: Lebar kolom disesuaikan */}
+        {/* Table */}
         <div className="es-table-wrap">
-          <table className="es-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+          <table className="es-table">
             <thead>
               <tr>
-                <th style={{ width: '15%', minWidth: '120px' }}>NIM</th>
-                <th style={{ width: '25%', minWidth: '180px' }}>Nama Mahasiswa</th>
-                <th style={{ width: '10%', minWidth: '80px', textAlign: 'center' }}>Angkatan</th>
-                <th style={{ width: '10%', minWidth: '70px', textAlign: 'center' }}>IPK</th>
-                <th style={{ width: '10%', minWidth: '60px', textAlign: 'center' }}>SKS</th>
-                <th style={{ width: '18%', minWidth: '130px' }}>Status</th>
-                <th style={{ width: '12%', minWidth: '120px', textAlign: 'center' }}>Aksi</th>
+                <th>NIM</th>
+                <th>Nama Mahasiswa</th>
+                <th className="es-center">Angkatan</th>
+                <th className="es-center">IPK</th>
+                <th className="es-center">SKS</th>
+                <th>Status</th>
+                <th className="es-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -655,12 +1245,9 @@ const EvaluasiStudi = () => {
                   
                   return (
                     <tr key={mhs.id || index}>
-                      <td style={{ wordBreak: 'break-word' }}>
-                        <span className="es-nim">{mhs.npm || mhs.nim || '-'}</span>
-                      </td>
-                      <td style={{ wordBreak: 'break-word' }}>
-                        <span className="es-name">{mhs.nama_lengkap || mhs.nama || '-'}</span>
-                      </td>
+                      {/* ✅ PAKAI npm atau nim */}
+                      <td><span className="es-nim">{mhs.npm || mhs.nim || '-'}</span></td>
+                      <td><span className="es-name">{mhs.nama_lengkap || mhs.nama || '-'}</span></td>
                       <td className="es-center" style={{ fontSize:'13px', fontWeight:600 }}>
                         {mhs.angkatan || '-'}
                       </td>
