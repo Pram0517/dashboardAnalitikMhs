@@ -260,6 +260,8 @@ const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', f
   const params = [];
   let paramIndex = 1;
 
+  console.log('🔍 Backend filters:', { search, filterStatus, filterAngkatan });
+
   if (search) {
     whereClause += ` AND (m.npm ILIKE $${paramIndex} OR m.nama_lengkap ILIKE $${paramIndex})`;
     params.push(`%${search}%`);
@@ -278,6 +280,9 @@ const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', f
     params.push(parseInt(filterAngkatan));
     paramIndex++;
   }
+
+  console.log('📝 Where clause:', whereClause);
+  console.log('📝 Params:', params);
 
   const query = `
     SELECT 
@@ -308,6 +313,7 @@ const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', f
   params.push(limit, offset);
 
   const result = await pool.query(query, params);
+  console.log('📊 Query result count:', result.rows.length);
 
   const countQuery = `
     SELECT COUNT(*) as total

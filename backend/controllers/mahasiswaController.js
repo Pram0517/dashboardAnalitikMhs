@@ -126,16 +126,19 @@ const getAllWithDetails = async (req, res) => {
     const offset = (page - 1) * limit;
     const search = req.query.search || '';
     const filterStatus = req.query.filterStatus || '';
-    const filterAngkatan = req.query.filterAngkatan || ''; // ← TAMBAHKAN
+    const filterAngkatan = req.query.filterAngkatan || '';
+
+    console.log('📥 Controller received:', { page, limit, search, filterStatus, filterAngkatan });
 
     const result = await mahasiswaService.getAllMahasiswaWithDetails(
       limit,
       offset,
       search,
       filterStatus,
-      filterAngkatan // ← KIRIM KE SERVICE
+      filterAngkatan
     );
 
+    // Format data
     const formattedData = result.data.map(item => ({
       id: item.id,
       npm: item.npm,
@@ -170,6 +173,7 @@ const getAllWithDetails = async (req, res) => {
     });
   }
 };
+
 
 
 // ============ GET MAHASISWA BY NIM WITH DETAILS (FIXED) ============
