@@ -38,13 +38,11 @@ const io = new Server(server, {
 });
 
 // ============ SOCKET.IO ============
-// Map untuk menyimpan koneksi user
 const userSockets = new Map();
 
 io.on('connection', (socket) => {
     console.log('🔌 Client connected:', socket.id);
 
-    // Register user
     socket.on('register', (userId) => {
         if (userId) {
             userSockets.set(userId, socket.id);
@@ -52,13 +50,11 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Join room untuk user
     socket.on('join', (userId) => {
         socket.join(`user_${userId}`);
         console.log(`📢 User ${userId} joined room user_${userId}`);
     });
 
-    // Disconnect
     socket.on('disconnect', () => {
         console.log('🔌 Client disconnected:', socket.id);
         for (const [userId, socketId] of userSockets.entries()) {
@@ -94,20 +90,17 @@ const sendNotification = async(userId, title, message, type = 'info', link = nul
     }
 };
 
-// Export io dan sendNotification untuk digunakan di controller lain
+// Export io dan sendNotification
 module.exports = { app, server, io, sendNotification };
 
 // ============ MIDDLEWARE ============
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: process.env.CORS_ORIGIN || '*',
     credentials: true
 }));
 
-// ✅ MIDDLEWARE UNTUK PARSING JSON DAN URLENCODED
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// ✅ MIDDLEWARE UNTUK STATIC FILES (Uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ============ TEST DATABASE ============
@@ -154,7 +147,7 @@ app.use('/api/evaluasi', evaluasiRoutes);
 app.use('/api/kurikulum', kurikulumRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/capstone', capstoneRoutes);
-app.use('/api/user', userRoutes);  // ✅ Route user sudah termasuk profile-image
+app.use('/api/user', userRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/nilai', nilaiRoutes);
@@ -180,10 +173,10 @@ server.listen(PORT, () => {
     console.log(`📸 Profile image: http://localhost:${PORT}/api/user/profile-image`);
     console.log(`🔌 Socket.IO running on port ${PORT}`);
     
-    // Cek Cloudinary configuration
+    // Cek Cloudinary
     if (process.env.CLOUDINARY_CLOUD_NAME) {
         console.log(`☁️ Cloudinary configured: ${process.env.CLOUDINARY_CLOUD_NAME}`);
     } else {
-        console.warn('⚠️ Cloudinary credentials not found in environment variables');
+        console.warn('⚠️ Cloudinary credentials not found');
     }
 });
