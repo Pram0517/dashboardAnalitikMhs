@@ -176,127 +176,127 @@ export const AuthProvider = ({ children }) => {
 
     // ============ UPLOAD PROFILE IMAGE ============
     const uploadProfileImage = async (file) => {
-        try {
-            const formData = new FormData();
-            formData.append('profileImage', file);
+    try {
+        const formData = new FormData();
+        formData.append('profileImage', file);
 
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/user/profile-image`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
+        const token = localStorage.getItem('token');
+        console.log('📸 Uploading to:', ENDPOINTS.profileImage); // ← Debug
+        
+        const response = await fetch(ENDPOINTS.profileImage, { // ← Gunakan ENDPOINTS
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
 
-            const data = await response.json();
-            console.log('📸 Upload response:', data);
+        const data = await response.json();
+        console.log('📸 Upload response:', data);
 
-            if (response.ok) {
-                const imageUrl = data.data?.profileImage || 
-                                data.user?.profileImage || 
-                                data.user?.profile_image || 
-                                null;
-                
-                console.log('📸 Image URL extracted:', imageUrl);
-                
-                if (imageUrl) {
-                    const updatedUser = {
-                        ...user,
-                        profileImage: imageUrl,
-                        profile_image: imageUrl
-                    };
-                    
-                    setUser(updatedUser);
-                    localStorage.setItem('uad_user', JSON.stringify(updatedUser));
-                    
-                    toast.success('Foto profil berhasil diupload');
-                    return imageUrl;
-                } else {
-                    toast.error('Gagal mendapatkan URL foto');
-                    return null;
-                }
-            } else {
-                toast.error(data.message || 'Gagal upload foto');
-                return null;
-            }
-        } catch (error) {
-            console.error('Upload profile image error:', error);
-            toast.error('Gagal terhubung ke server');
-            return null;
-        }
-    };
-
-    // ============ DELETE PROFILE IMAGE ============
-    const deleteProfileImage = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/user/profile-image`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            const data = await response.json();
-            console.log('🗑️ Delete response:', data);
-
-            if (response.ok) {
+        if (response.ok) {
+            const imageUrl = data.data?.profileImage || 
+                            data.user?.profileImage || 
+                            data.user?.profile_image || 
+                            null;
+            
+            if (imageUrl) {
                 const updatedUser = {
                     ...user,
-                    profileImage: null,
-                    profile_image: null
+                    profileImage: imageUrl,
+                    profile_image: imageUrl
                 };
                 
                 setUser(updatedUser);
                 localStorage.setItem('uad_user', JSON.stringify(updatedUser));
                 
-                toast.success('Foto profil berhasil dihapus');
-                return true;
+                toast.success('Foto profil berhasil diupload');
+                return imageUrl;
             } else {
-                toast.error(data.message || 'Gagal hapus foto');
-                return false;
+                toast.error('Gagal mendapatkan URL foto');
+                return null;
             }
-        } catch (error) {
-            console.error('Delete profile image error:', error);
-            toast.error('Gagal terhubung ke server');
+        } else {
+            toast.error(data.message || 'Gagal upload foto');
+            return null;
+        }
+    } catch (error) {
+        console.error('Upload profile image error:', error);
+        toast.error('Gagal terhubung ke server');
+        return null;
+    }
+};
+
+// ============ DELETE PROFILE IMAGE ============
+const deleteProfileImage = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(ENDPOINTS.profileImage, { // ← Gunakan ENDPOINTS
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+        console.log('🗑️ Delete response:', data);
+
+        if (response.ok) {
+            const updatedUser = {
+                ...user,
+                profileImage: null,
+                profile_image: null
+            };
+            
+            setUser(updatedUser);
+            localStorage.setItem('uad_user', JSON.stringify(updatedUser));
+            
+            toast.success('Foto profil berhasil dihapus');
+            return true;
+        } else {
+            toast.error(data.message || 'Gagal hapus foto');
             return false;
         }
-    };
+    } catch (error) {
+        console.error('Delete profile image error:', error);
+        toast.error('Gagal terhubung ke server');
+        return false;
+    }
+};
 
-    // ============ REFRESH USER ============
-    const refreshUser = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/auth/profile`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                const userData = data.user || data;
-                
-                const formattedUser = {
-                    ...user,
-                    name: userData.name || userData.nama_lengkap || user?.name,
-                    email: userData.email || user?.email,
-                    role: userData.role || user?.role,
-                    profileImage: userData.profile_image || userData.profileImage || user?.profileImage,
-                    profile_image: userData.profile_image || userData.profileImage || user?.profile_image
-                };
-                
-                setUser(formattedUser);
-                localStorage.setItem('uad_user', JSON.stringify(formattedUser));
-                return formattedUser;
+// ============ REFRESH USER ============
+const refreshUser = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/auth/profile`, { // ← Gunakan API_URL
+            headers: {
+                'Authorization': `Bearer ${token}`
             }
-            return null;
-        } catch (error) {
-            console.error('Refresh user error:', error);
-            return null;
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const userData = data.user || data;
+            
+            const formattedUser = {
+                ...user,
+                name: userData.name || userData.nama_lengkap || user?.name,
+                email: userData.email || user?.email,
+                role: userData.role || user?.role,
+                profileImage: userData.profile_image || userData.profileImage || user?.profileImage,
+                profile_image: userData.profile_image || userData.profileImage || user?.profile_image
+            };
+            
+            setUser(formattedUser);
+            localStorage.setItem('uad_user', JSON.stringify(formattedUser));
+            return formattedUser;
         }
-    };
+        return null;
+    } catch (error) {
+        console.error('Refresh user error:', error);
+        return null;
+    }
+};
 
     // ============ CHANGE PASSWORD ============
     const changePassword = async (oldPassword, newPassword) => {
