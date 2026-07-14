@@ -113,20 +113,24 @@ const SidebarLayout = () => {
 
         {/* User Info & Logout */}
         <div className="p-4 border-t border-white/10 bg-black/10">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold truncate w-32">{user?.name || 'User'}</span>
-              <span className="text-xs text-white/60">{user?.role || 'Unknown'}</span>
-            </div>
-            <button 
-              onClick={handleLogout}
-              className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              title="Logout"
-            >
-              <LogOut size={20} />
-            </button>
-          </div>
-        </div>
+  <div className="flex items-center justify-between">
+    <div className="flex flex-col">
+      <span className="text-sm font-semibold truncate w-32">
+        {user?.name || user?.nama_lengkap || 'User'}
+      </span>
+      <span className="text-xs text-white/60">
+        {user?.role || 'Unknown'}
+      </span>
+    </div>
+    <button 
+      onClick={handleLogout}
+      className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+      title="Logout"
+    >
+      <LogOut size={20} />
+    </button>
+  </div>
+</div>
       </aside>
 
       {/* Main Content Area */}
