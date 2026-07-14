@@ -13,6 +13,8 @@ export const useAuth = () => {
     return context;
 };
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -26,11 +28,9 @@ export const AuthProvider = ({ children }) => {
             
             if (token && savedUser) {
                 try {
-                    // ✅ Parse user data dari localStorage
                     const userData = JSON.parse(savedUser);
                     console.log('📦 Saved user data:', userData);
                     
-                    // ✅ Cek apakah data valid
                     if (userData && userData.role) {
                         setUser(userData);
                         setLoading(false);
@@ -38,7 +38,6 @@ export const AuthProvider = ({ children }) => {
                         return;
                     }
                     
-                    // Jika data tidak valid, coba verifikasi ke backend
                     const profile = await authService.getProfile();
                     if (profile) {
                         const formattedUser = {
@@ -54,7 +53,6 @@ export const AuthProvider = ({ children }) => {
                             mahasiswa_status: profile.mahasiswa_status || 'aktif',
                             angkatan: profile.angkatan || null,
                             npm: profile.npm || null,
-                            // 👇 Tambahkan field untuk foto profil
                             profileImage: profile.profile_image || profile.profileImage || null,
                             profile_image: profile.profile_image || profile.profileImage || null
                         };
@@ -87,7 +85,6 @@ export const AuthProvider = ({ children }) => {
             if (result && result.token && result.user) {
                 const userData = result.user;
                 
-                // ✅ PASTIKAN SEMUA FIELD TERISI
                 const formattedUser = {
                     id: userData.id || userData.user_id || null,
                     name: userData.name || userData.nama_lengkap || userData.username || 'User',
@@ -101,17 +98,13 @@ export const AuthProvider = ({ children }) => {
                     mahasiswa_status: userData.mahasiswa_status || 'aktif',
                     angkatan: userData.angkatan || null,
                     npm: userData.npm || null,
-                    // 👇 Tambahkan field untuk foto profil
                     profileImage: userData.profile_image || userData.profileImage || null,
                     profile_image: userData.profile_image || userData.profileImage || null
                 };
                 
                 console.log('✅ Formatted user:', formattedUser);
-                console.log('✅ Role:', formattedUser.role);
-                console.log('✅ Name:', formattedUser.name);
                 console.log('✅ Profile Image:', formattedUser.profileImage);
                 
-                // Simpan token dan user data
                 localStorage.setItem('token', result.token);
                 localStorage.setItem('uad_user', JSON.stringify(formattedUser));
                 
@@ -146,10 +139,8 @@ export const AuthProvider = ({ children }) => {
     // ============ UPDATE PROFILE ============
     const updateUserProfile = async (name, email, profileImage = null) => {
         try {
-            // Siapkan data yang akan diupdate
             const updateData = { name, email };
             
-            // Jika profileImage diberikan (termasuk null untuk hapus)
             if (profileImage !== undefined) {
                 updateData.profileImage = profileImage;
             }
@@ -157,7 +148,6 @@ export const AuthProvider = ({ children }) => {
             const result = await authService.updateProfile(updateData);
             
             if (result) {
-                // Update user state
                 const updatedUser = { 
                     ...user, 
                     name, 
@@ -191,7 +181,7 @@ export const AuthProvider = ({ children }) => {
             formData.append('profileImage', file);
 
             const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/user/profile-image`, {
+            const response = await fetch(`${API_URL}/user/profile-image`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -200,22 +190,32 @@ export const AuthProvider = ({ children }) => {
             });
 
             const data = await response.json();
+            console.log('📸 Upload response:', data);
 
             if (response.ok) {
-                const imageUrl = data.data?.profileImage || data.data?.url;
+                const imageUrl = data.data?.profileImage || 
+                                data.user?.profileImage || 
+                                data.user?.profile_image || 
+                                null;
                 
-                // Update user state
-                const updatedUser = {
-                    ...user,
-                    profileImage: imageUrl,
-                    profile_image: imageUrl
-                };
+                console.log('📸 Image URL extracted:', imageUrl);
                 
-                setUser(updatedUser);
-                localStorage.setItem('uad_user', JSON.stringify(updatedUser));
-                
-                toast.success('Foto profil berhasil diupload');
-                return imageUrl;
+                if (imageUrl) {
+                    const updatedUser = {
+                        ...user,
+                        profileImage: imageUrl,
+                        profile_image: imageUrl
+                    };
+                    
+                    setUser(updatedUser);
+                    localStorage.setItem('uad_user', JSON.stringify(updatedUser));
+                    
+                    toast.success('Foto profil berhasil diupload');
+                    return imageUrl;
+                } else {
+                    toast.error('Gagal mendapatkan URL foto');
+                    return null;
+                }
             } else {
                 toast.error(data.message || 'Gagal upload foto');
                 return null;
@@ -231,15 +231,17 @@ export const AuthProvider = ({ children }) => {
     const deleteProfileImage = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/user/profile-image`, {
+            const response = await fetch(`${API_URL}/user/profile-image`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
 
+            const data = await response.json();
+            console.log('🗑️ Delete response:', data);
+
             if (response.ok) {
-                // Update user state
                 const updatedUser = {
                     ...user,
                     profileImage: null,
@@ -252,7 +254,6 @@ export const AuthProvider = ({ children }) => {
                 toast.success('Foto profil berhasil dihapus');
                 return true;
             } else {
-                const data = await response.json();
                 toast.error(data.message || 'Gagal hapus foto');
                 return false;
             }
@@ -260,6 +261,40 @@ export const AuthProvider = ({ children }) => {
             console.error('Delete profile image error:', error);
             toast.error('Gagal terhubung ke server');
             return false;
+        }
+    };
+
+    // ============ REFRESH USER ============
+    const refreshUser = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_URL}/auth/profile`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                const userData = data.user || data;
+                
+                const formattedUser = {
+                    ...user,
+                    name: userData.name || userData.nama_lengkap || user?.name,
+                    email: userData.email || user?.email,
+                    role: userData.role || user?.role,
+                    profileImage: userData.profile_image || userData.profileImage || user?.profileImage,
+                    profile_image: userData.profile_image || userData.profileImage || user?.profile_image
+                };
+                
+                setUser(formattedUser);
+                localStorage.setItem('uad_user', JSON.stringify(formattedUser));
+                return formattedUser;
+            }
+            return null;
+        } catch (error) {
+            console.error('Refresh user error:', error);
+            return null;
         }
     };
 
@@ -284,6 +319,7 @@ export const AuthProvider = ({ children }) => {
         updateUserProfile,
         uploadProfileImage,
         deleteProfileImage,
+        refreshUser,
         changePassword,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',

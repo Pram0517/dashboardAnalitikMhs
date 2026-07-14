@@ -1,3 +1,4 @@
+// FRONTEND/src/pages/Settings.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Lock, Bell, Camera, Save, CheckCircle2, Mail, Shield, Eye, EyeOff, Loader, X } from 'lucide-react';
@@ -18,7 +19,6 @@ const T = {
 };
 
 const avatarGradient = `linear-gradient(135deg, ${T.mid} 0%, ${T.navy} 100%)`;
-const API_URL = 'https://dashboardanalitikmhs-production.up.railway.app/api';
 
 // ============ [COMPONENTS] ============
 const NavItem = ({ icon: Icon, label, active, onClick }) => (
@@ -216,7 +216,7 @@ const ToggleSwitch = ({ defaultOn, onChange }) => {
 
 // ============ [MAIN COMPONENT] ============
 const Settings = () => {
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, uploadProfileImage, deleteProfileImage, refreshUser } = useAuth();
   const [activeNav, setActiveNav] = useState('profil');
   const fileInputRef = useRef(null);
 
@@ -227,10 +227,10 @@ const Settings = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   
   // State Foto Profil
-  const [profileImage, setProfileImage] = useState(null); // URL string
-  const [selectedFile, setSelectedFile] = useState(null); // File object
+  const [profileImage, setProfileImage] = useState(user?.profileImage || user?.profile_image || null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null); // Untuk preview sebelum upload
+  const [previewImage, setPreviewImage] = useState(null);
 
   // State Keamanan
   const [oldPassword, setOldPassword] = useState('');
@@ -249,12 +249,31 @@ const Settings = () => {
   const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  // ============ MONITOR STATE CHANGES ============
+  useEffect(() => {
+    console.log('🔄 Settings state updated:', {
+      profileImage,
+      userProfileImage: user?.profileImage,
+      userProfile_image: user?.profile_image,
+      previewImage,
+      selectedFile: !!selectedFile
+    });
+  }, [profileImage, user, previewImage, selectedFile]);
+
   // ============ API CALLS ============
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': `Bearer ${token}`,
+    };
+  };
+
   const fetchPreferences = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/user/preferences`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders()
       });
       
       if (response.ok) {
@@ -273,11 +292,10 @@ const Settings = () => {
   const savePreferences = async () => {
     setIsSavingPreferences(true);
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/user/preferences`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          ...getAuthHeaders(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(preferences)
@@ -302,8 +320,9 @@ const Settings = () => {
     if (!file) return;
 
     // Validasi tipe file
-    if (!file.type.startsWith('image/')) {
-      toast.error('File harus berupa gambar');
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('File harus berupa gambar (JPG, PNG, GIF, atau WEBP)');
       return;
     }
 
@@ -329,46 +348,36 @@ const Settings = () => {
       return;
     }
 
+    console.log('📸 Before upload:', { selectedFile, profileImage, user });
     setIsUploadingPhoto(true);
     
     try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('profileImage', selectedFile);
-
-      const response = await fetch(`${API_URL}/user/profile-image`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setProfileImage(data.imageUrl || data.url);
+      const result = await uploadProfileImage(selectedFile);
+      console.log('📸 Upload result:', result);
+      
+      if (result) {
+        setProfileImage(result);
         setPreviewImage(null);
         setSelectedFile(null);
-        toast.success('Foto profil berhasil diupload!');
-        
-        // Update user context jika ada
-        if (updateUserProfile) {
-          await updateUserProfile(nama, email, data.imageUrl || data.url);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
         }
-      } else {
-        toast.error(data.message || 'Gagal upload foto');
+        
+        // Refresh user data untuk memastikan konsistensi
+        await refreshUser();
+        console.log('📸 After refresh:', { user: user?.profileImage });
       }
     } catch (error) {
-      console.error('Error uploading photo:', error);
-      toast.error('Gagal terhubung ke server');
+      console.error('Error in handleUploadPhoto:', error);
+      toast.error('Gagal upload foto');
     } finally {
       setIsUploadingPhoto(false);
     }
   };
 
   const handleRemovePhoto = async () => {
-    if (!profileImage && !user?.profileImage) {
+    const currentImage = profileImage || user?.profileImage || user?.profile_image;
+    if (!currentImage) {
       toast.error('Tidak ada foto untuk dihapus');
       return;
     }
@@ -378,29 +387,14 @@ const Settings = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/user/profile-image`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
+      const success = await deleteProfileImage();
+      if (success) {
         setProfileImage(null);
-        toast.success('Foto profil berhasil dihapus');
-        
-        // Update user context
-        if (updateUserProfile) {
-          await updateUserProfile(nama, email, null);
-        }
-      } else {
-        const data = await response.json();
-        toast.error(data.message || 'Gagal menghapus foto');
+        await refreshUser();
       }
     } catch (error) {
-      console.error('Error removing photo:', error);
-      toast.error('Gagal terhubung ke server');
+      console.error('Error in handleRemovePhoto:', error);
+      toast.error('Gagal hapus foto');
     }
   };
 
@@ -417,7 +411,7 @@ const Settings = () => {
     if (user) {
       setNama(user.name || '');
       setEmail(user.email || '');
-      setProfileImage(user.profileImage || null);
+      setProfileImage(user.profileImage || user.profile_image || null);
     }
   }, [user]);
 
@@ -437,6 +431,7 @@ const Settings = () => {
       const success = await updateUserProfile(nama, email);
       if (success) {
         setIsEditing(false);
+        await refreshUser();
         toast.success('Profil berhasil diperbarui!');
       }
     } catch (error) {
@@ -469,11 +464,10 @@ const Settings = () => {
     setIsChangingPassword(true);
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/auth/change-password`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          ...getAuthHeaders(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ oldPassword, newPassword })
@@ -505,6 +499,7 @@ const Settings = () => {
     if (previewImage) return previewImage;
     if (profileImage) return profileImage;
     if (user?.profileImage) return user.profileImage;
+    if (user?.profile_image) return user.profile_image;
     return null;
   };
 
@@ -556,11 +551,6 @@ const Settings = () => {
         .se2 { animation: settingsFadeUp 0.5s 0.07s cubic-bezier(.22,1,.36,1) both; }
         .se3 { animation: settingsFadeUp 0.5s 0.14s cubic-bezier(.22,1,.36,1) both; }
         .se4 { animation: settingsFadeUp 0.5s 0.21s cubic-bezier(.22,1,.36,1) both; }
-        @keyframes zoomIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        .zoom-in { animation: zoomIn 0.2s cubic-bezier(.34,1.56,.64,1) both; }
       `}</style>
 
       <div style={{
