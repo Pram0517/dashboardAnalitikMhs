@@ -1,3 +1,4 @@
+// FRONTEND/src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
@@ -44,7 +45,9 @@ function App() {
             <Route element={<SidebarLayout />}>
               
               {/* Admin & Kaprodi Only */}
-              <Route element={<RoleBasedRoute allowedRoles={['admin', 'kaprodi']} />}>
+              <Route 
+                element={<RoleBasedRoute allowedRoles={['admin', 'kaprodi']} />}
+              >
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/evaluasi-studi" element={<EvaluasiStudi />} />
                 <Route path="/capstone" element={<Capstone />} />
@@ -53,12 +56,16 @@ function App() {
               </Route>
 
               {/* Admin Only */}
-              <Route element={<RoleBasedRoute allowedRoles={['admin']} />}>
+              <Route 
+                element={<RoleBasedRoute allowedRoles={['admin']} />}
+              >
                 <Route path="/kurikulum" element={<Kurikulum />} />
               </Route>
 
               {/* Mahasiswa Only */}
-              <Route element={<RoleBasedRoute allowedRoles={['mahasiswa']} />}>
+              <Route 
+                element={<RoleBasedRoute allowedRoles={['mahasiswa']} />}
+              >
                 <Route path="/mahasiswa/self" element={<MahasiswaDetail />} />
               </Route>
 

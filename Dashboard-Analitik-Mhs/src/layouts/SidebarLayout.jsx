@@ -1,3 +1,4 @@
+// FRONTEND/src/layouts/SidebarLayout.jsx
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -23,12 +24,13 @@ const SidebarLayout = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // ✅ Debug: Cek user state
+  // ✅ Debug
   useEffect(() => {
     console.log('🔍 SidebarLayout - User:', user);
     console.log('🔍 SidebarLayout - Loading:', loading);
   }, [user, loading]);
 
+  // ✅ Definisikan navItems dengan aman
   const navItems = [
     { name: 'Data Saya', path: '/mahasiswa/self', icon: User, roles: ['mahasiswa'] },
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'kaprodi'] },
@@ -40,7 +42,7 @@ const SidebarLayout = () => {
     { name: 'Pengaturan', path: '/settings', icon: Settings, roles: ['admin', 'kaprodi', 'mahasiswa'] },
   ];
 
-  // ✅ Filter navItems berdasarkan role user
+  // ✅ Filter navItems berdasarkan role user dengan aman
   const filteredNavItems = user?.role 
     ? navItems.filter(item => item.roles.includes(user.role))
     : [];

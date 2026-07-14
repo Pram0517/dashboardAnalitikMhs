@@ -1,14 +1,20 @@
+// FRONTEND/src/components/PrivateRoute.jsx
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-// ============ [PRIVATE ROUTE] ============
-// [KOMPONEN] PrivateRoute - Wrapper untuk melindungi halaman dari akses tanpa login
 
 const PrivateRoute = () => {
   const { user, loading } = useAuth();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  // ✅ Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-sans text-accent2">
+        Loading...
+      </div>
+    );
+  }
 
+  // ✅ Cek user
   return user ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
