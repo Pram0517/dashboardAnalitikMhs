@@ -35,4 +35,13 @@ router.get('/preferences', authMiddleware, getPreferences);
 // Update user preferences
 router.put('/preferences', authMiddleware, updatePreferences);
 
+// Test route
+router.get('/test', (req, res) => {
+    res.json({
+        status: 'Success',
+        message: 'User route is working',
+        timestamp: new Date().toISOString()
+    });
+});
+
 module.exports = router;
