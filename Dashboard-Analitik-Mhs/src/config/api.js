@@ -1,4 +1,4 @@
-// src/config/api.js
+// FRONTEND/src/config/api.js
 // ✅ PASTIKAN TIDAK ADA TRAILING SLASH
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://dashboardanalitikmhs-production.up.railway.app';
 
@@ -24,3 +24,5 @@ export const ENDPOINTS = {
     preferences: `${API_URL}/user/preferences`,
     profileImage: `${API_URL}/user/profile-image`,
 };
+
+console.log('  ENDPOINTS:', ENDPOINTS);
