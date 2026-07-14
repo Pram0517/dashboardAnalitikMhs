@@ -217,7 +217,7 @@ const ToggleSwitch = ({ defaultOn, onChange }) => {
 
 // ============ [MAIN COMPONENT] ============
 const Settings = () => {
-  const { user, updateUserProfile, uploadProfileImage, deleteProfileImage, refreshUser } = useAuth();
+  const { user, updateUserProfile, uploadProfileImage, deleteProfileImage, refreshUser, fetchProfileImage } = useAuth();
   const [activeNav, setActiveNav] = useState('profil');
   const fileInputRef = useRef(null);
 
@@ -232,6 +232,7 @@ const Settings = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
 
   // State Keamanan
   const [oldPassword, setOldPassword] = useState('');
@@ -258,51 +259,37 @@ const Settings = () => {
     };
   };
 
-  // ============ FORCE REFRESH USER FROM DATABASE ============
-  const forceRefreshUser = async () => {
+  // ============ LOAD PROFILE IMAGE LANGSUNG DARI API ============
+  const loadProfileImage = async () => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('🔄 Force refreshing user from database...');
+      setIsLoadingImage(true);
+      console.log('📸 Loading profile image directly from API in Settings...');
       
-      const response = await fetch(`${API_URL}/auth/profile`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const image = await fetchProfileImage();
+      console.log('📸 Profile image loaded in Settings:', image);
       
-      if (response.ok) {
-        const data = await response.json();
-        const userData = data.user || data;
-        console.log('🔄 User data from database:', userData);
-        console.log('🔄 Profile image from database:', userData.profile_image || userData.profileImage);
-        
-        const formattedUser = {
-          ...user,
-          name: userData.name || userData.nama_lengkap || user?.name,
-          email: userData.email || user?.email,
-          role: userData.role || user?.role,
-          profileImage: userData.profile_image || userData.profileImage || null,
-          profile_image: userData.profile_image || userData.profileImage || null
-        };
-        
-        console.log('🔄 Formatted user:', formattedUser);
-        
-        // ✅ Update user di context dan localStorage
-        if (typeof refreshUser === 'function') {
-          await refreshUser();
-        }
-        
-        // ✅ Update state lokal
-        const image = formattedUser.profileImage || formattedUser.profile_image;
-        console.log('🔄 Setting profile image to:', image);
+      if (image) {
         setProfileImage(image);
-        
-        return formattedUser;
+        // ✅ Update user di context juga
+        if (user) {
+          const updatedUser = {
+            ...user,
+            profileImage: image,
+            profile_image: image
+          };
+          localStorage.setItem('uad_user', JSON.stringify(updatedUser));
+        }
+        return image;
+      } else {
+        // Jika tidak ada image, set ke null
+        setProfileImage(null);
+        return null;
       }
-      return null;
     } catch (error) {
-      console.error('Force refresh error:', error);
+      console.error('Error loading profile image:', error);
       return null;
+    } finally {
+      setIsLoadingImage(false);
     }
   };
 
@@ -428,16 +415,15 @@ const Settings = () => {
           fileInputRef.current.value = '';
         }
         
-        // ✅ Force refresh dari database
-        console.log('📸 Force refreshing from database...');
-        const refreshed = await forceRefreshUser();
+        // ✅ Refresh user dari database
+        console.log('📸 Refreshing user from database...');
+        const refreshed = await refreshUser();
         console.log('📸 Refreshed user:', refreshed);
         
-        if (refreshed) {
-          const image = refreshed.profileImage || refreshed.profile_image || result;
-          console.log('📸 Final profile image:', image);
-          setProfileImage(image);
-        }
+        // ✅ Load ulang profile image dari API
+        console.log('📸 Reloading profile image from API...');
+        const image = await loadProfileImage();
+        console.log('📸 Final profile image:', image);
         
         toast.success('Foto profil berhasil diupload!');
       } else {
@@ -467,7 +453,8 @@ const Settings = () => {
       const success = await deleteProfileImage();
       if (success) {
         setProfileImage(null);
-        await forceRefreshUser();
+        await refreshUser();
+        await loadProfileImage();
         toast.success('Foto profil berhasil dihapus');
       }
     } catch (error) {
@@ -491,9 +478,10 @@ const Settings = () => {
       userProfileImage: user?.profileImage,
       userProfile_image: user?.profile_image,
       previewImage: !!previewImage,
-      selectedFile: !!selectedFile
+      selectedFile: !!selectedFile,
+      isLoadingImage
     });
-  }, [profileImage, user, previewImage, selectedFile]);
+  }, [profileImage, user, previewImage, selectedFile, isLoadingImage]);
 
   // ============ EFFECTS ============
   useEffect(() => {
@@ -501,21 +489,16 @@ const Settings = () => {
       setNama(user.name || '');
       setEmail(user.email || '');
       
-      // ✅ AMBIL PROFILE IMAGE DARI USER
-      const image = user.profileImage || user.profile_image || null;
-      console.log('🔄 Setting profile image from user:', image);
-      setProfileImage(image);
+      // ✅ LOAD PROFILE IMAGE LANGSUNG DARI API
+      console.log('🔄 User changed, loading profile image...');
+      loadProfileImage();
     }
   }, [user]);
 
   useEffect(() => {
     fetchPreferences();
-    // ✅ Load profile image setelah mount
-    if (user) {
-      const image = user.profileImage || user.profile_image || null;
-      console.log('🔄 Initial profile image load:', image);
-      setProfileImage(image);
-    }
+    // ✅ LOAD PROFILE IMAGE SAAT MOUNT
+    loadProfileImage();
   }, []);
 
   // ============ HANDLERS ============
@@ -530,7 +513,8 @@ const Settings = () => {
       const success = await updateUserProfile(nama, email);
       if (success) {
         setIsEditing(false);
-        await forceRefreshUser();
+        await refreshUser();
+        await loadProfileImage();
         toast.success('Profil berhasil diperbarui!');
       }
     } catch (error) {
@@ -622,7 +606,7 @@ const Settings = () => {
     );
   }
 
-  if (isLoadingPrefs) {
+  if (isLoadingPrefs || isLoadingImage) {
     return (
       <div style={{
         minHeight: '100vh',

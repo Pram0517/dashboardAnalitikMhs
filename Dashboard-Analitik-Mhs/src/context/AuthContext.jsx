@@ -1,7 +1,7 @@
 // FRONTEND/src/context/AuthContext.jsx
 import { createContext, useState, useEffect, useContext } from 'react';
 import { authService } from '../services/authService';
-import { API_URL, ENDPOINTS } from '../config/api'; // ← PASTIKAN IMPORT INI
+import { API_URL, ENDPOINTS } from '../config/api';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
@@ -18,157 +18,169 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // ============ CHECK SESSION ============
-    useEffect(() => {
-    const checkSession = async () => {
-        const token = localStorage.getItem('token');
-        const savedUser = localStorage.getItem('uad_user');
-        
-        console.log('🔍 Checking session:', { token: !!token, savedUser: !!savedUser });
-        
-        if (token && savedUser) {
-            try {
-                const userData = JSON.parse(savedUser);
-                console.log('📦 Saved user data:', userData);
-                
-                if (userData && userData.role) {
-                    // ✅ Cek apakah profileImage ada di localStorage
-                    console.log('📦 Profile image in localStorage:', userData.profileImage || userData.profile_image || 'NOT FOUND');
-                    
-                    // ✅ Jika tidak ada, ambil dari backend
-                    if (!userData.profileImage && !userData.profile_image) {
-                        console.log('🔄 No profile image in localStorage, fetching from backend...');
-                        const profile = await fetchUserProfile(token);
-                        if (profile) {
-                            const formattedUser = {
-                                ...userData,
-                                profileImage: profile.profile_image || profile.profileImage || null,
-                                profile_image: profile.profile_image || profile.profileImage || null
-                            };
-                            console.log('✅ Updated user with profile image:', formattedUser);
-                            setUser(formattedUser);
-                            localStorage.setItem('uad_user', JSON.stringify(formattedUser));
-                            setLoading(false);
-                            return;
-                        }
-                    }
-                    
-                    setUser(userData);
-                    setLoading(false);
-                    console.log('✅ User restored from localStorage:', userData.role);
-                    return;
-                }
-                
-                // Jika data tidak valid, coba verifikasi ke backend
-                const profile = await authService.getProfile();
-                if (profile) {
-                    const formattedUser = {
-                        id: profile.id || profile.user_id || null,
-                        name: profile.name || profile.nama_lengkap || 'User',
-                        email: profile.email || '',
-                        role: profile.role || 'mahasiswa',
-                        nim: profile.nim || profile.npm || null,
-                        mahasiswa_id: profile.mahasiswa_id || null,
-                        nama_lengkap: profile.nama_lengkap || profile.name || null,
-                        semester: profile.semester || 1,
-                        gpa: profile.gpa || null,
-                        mahasiswa_status: profile.mahasiswa_status || 'aktif',
-                        angkatan: profile.angkatan || null,
-                        npm: profile.npm || null,
-                        // ✅ AMBIL PROFILE IMAGE DARI BACKEND
-                        profileImage: profile.profile_image || profile.profileImage || null,
-                        profile_image: profile.profile_image || profile.profileImage || null
-                    };
-                    console.log('✅ Profile from backend with image:', formattedUser.profileImage);
-                    setUser(formattedUser);
-                    localStorage.setItem('uad_user', JSON.stringify(formattedUser));
-                } else {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('uad_user');
-                }
-            } catch (error) {
-                console.error('Session check error:', error);
-                localStorage.removeItem('token');
-                localStorage.removeItem('uad_user');
-            }
-        }
-        setLoading(false);
-    };
-    
-    // Fungsi untuk fetch profile
-    const fetchUserProfile = async (token) => {
+    // ============ FETCH PROFILE IMAGE LANGSUNG DARI API ============
+    const fetchProfileImage = async () => {
         try {
-            const response = await fetch(`${API_URL}/auth/profile`, {
+            const token = localStorage.getItem('token');
+            if (!token) return null;
+            
+            console.log('📸 Fetching profile image directly from API...');
+            
+            const response = await fetch(`${API_URL}/user/profile-image`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
+            
             if (response.ok) {
                 const data = await response.json();
-                return data.user || data;
+                const imageUrl = data?.data?.profileImage || null;
+                console.log('📸 Profile image from API:', imageUrl);
+                return imageUrl;
             }
             return null;
         } catch (error) {
-            console.error('Error fetching profile:', error);
+            console.error('Error fetching profile image:', error);
             return null;
         }
     };
-    
-    checkSession();
-}, []);
+
+    // ============ CHECK SESSION ============
+    useEffect(() => {
+        const checkSession = async () => {
+            const token = localStorage.getItem('token');
+            const savedUser = localStorage.getItem('uad_user');
+            
+            console.log('🔍 Checking session:', { token: !!token, savedUser: !!savedUser });
+            
+            if (token) {
+                try {
+                    let userData = null;
+                    
+                    // Coba ambil dari localStorage dulu
+                    if (savedUser) {
+                        userData = JSON.parse(savedUser);
+                        console.log('📦 Saved user data:', userData);
+                    }
+                    
+                    // Jika tidak ada di localStorage atau data tidak lengkap, ambil dari backend
+                    if (!userData || !userData.role) {
+                        console.log('🔄 Fetching user profile from backend...');
+                        const profile = await authService.getProfile();
+                        if (profile) {
+                            userData = {
+                                id: profile.id || profile.user_id || null,
+                                name: profile.name || profile.nama_lengkap || 'User',
+                                email: profile.email || '',
+                                role: profile.role || 'mahasiswa',
+                                nim: profile.nim || profile.npm || null,
+                                mahasiswa_id: profile.mahasiswa_id || null,
+                                nama_lengkap: profile.nama_lengkap || profile.name || null,
+                                semester: profile.semester || 1,
+                                gpa: profile.gpa || null,
+                                mahasiswa_status: profile.mahasiswa_status || 'aktif',
+                                angkatan: profile.angkatan || null,
+                                npm: profile.npm || null,
+                            };
+                            console.log('✅ User profile from backend:', userData);
+                        }
+                    }
+                    
+                    if (userData) {
+                        // ✅ AMBIL PROFILE IMAGE LANGSUNG DARI API
+                        const profileImage = await fetchProfileImage();
+                        console.log('📸 Profile image from API:', profileImage);
+                        
+                        // ✅ GABUNGKAN DATA USER DENGAN PROFILE IMAGE
+                        const formattedUser = {
+                            ...userData,
+                            profileImage: profileImage,
+                            profile_image: profileImage
+                        };
+                        
+                        console.log('✅ Final user with profile image:', formattedUser);
+                        console.log('📸 Profile image set:', formattedUser.profileImage);
+                        
+                        setUser(formattedUser);
+                        localStorage.setItem('uad_user', JSON.stringify(formattedUser));
+                    } else {
+                        // Jika tidak ada data user sama sekali
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('uad_user');
+                    }
+                } catch (error) {
+                    console.error('Session check error:', error);
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('uad_user');
+                }
+            }
+            setLoading(false);
+        };
+        
+        checkSession();
+    }, []);
 
     // ============ LOGIN ============
     const login = async (username, password) => {
-    try {
-        console.log('🔐 AuthContext login called');
-        
-        const result = await authService.login(username, password);
-        console.log('🔍 Login result:', result);
-        
-        if (result && result.token && result.user) {
-            const userData = result.user;
+        try {
+            console.log('🔐 AuthContext login called');
             
-            // ✅ AMBIL PROFILE IMAGE DARI RESPONSE LOGIN
-            const profileImage = userData.profile_image || userData.profileImage || null;
-            console.log('📸 Profile image from login:', profileImage);
+            const result = await authService.login(username, password);
+            console.log('🔍 Login result:', result);
             
-            const formattedUser = {
-                id: userData.id || userData.user_id || null,
-                name: userData.name || userData.nama_lengkap || userData.username || 'User',
-                email: userData.email || userData.username || '',
-                role: userData.role || 'mahasiswa',
-                nim: userData.nim || userData.npm || null,
-                mahasiswa_id: userData.mahasiswa_id || null,
-                nama_lengkap: userData.nama_lengkap || userData.name || null,
-                semester: userData.semester || 1,
-                gpa: userData.gpa || null,
-                mahasiswa_status: userData.mahasiswa_status || 'aktif',
-                angkatan: userData.angkatan || null,
-                npm: userData.npm || null,
-                // ✅ SIMPAN PROFILE IMAGE
-                profileImage: profileImage,
-                profile_image: profileImage
-            };
+            if (result && result.token && result.user) {
+                const userData = result.user;
+                
+                // Buat formatted user dari data login
+                const formattedUser = {
+                    id: userData.id || userData.user_id || null,
+                    name: userData.name || userData.nama_lengkap || userData.username || 'User',
+                    email: userData.email || userData.username || '',
+                    role: userData.role || 'mahasiswa',
+                    nim: userData.nim || userData.npm || null,
+                    mahasiswa_id: userData.mahasiswa_id || null,
+                    nama_lengkap: userData.nama_lengkap || userData.name || null,
+                    semester: userData.semester || 1,
+                    gpa: userData.gpa || null,
+                    mahasiswa_status: userData.mahasiswa_status || 'aktif',
+                    angkatan: userData.angkatan || null,
+                    npm: userData.npm || null,
+                };
+                
+                console.log('✅ Formatted user from login:', formattedUser);
+                
+                // ✅ Simpan token dulu
+                localStorage.setItem('token', result.token);
+                
+                // ✅ Ambil profile image dari API
+                const profileImage = await fetchProfileImage();
+                console.log('📸 Profile image from API after login:', profileImage);
+                
+                // ✅ Gabungkan dengan profile image
+                const finalUser = {
+                    ...formattedUser,
+                    profileImage: profileImage,
+                    profile_image: profileImage
+                };
+                
+                console.log('✅ Final user after login:', finalUser);
+                console.log('📸 Profile image set:', finalUser.profileImage);
+                
+                localStorage.setItem('uad_user', JSON.stringify(finalUser));
+                
+                setUser(finalUser);
+                toast.success(`Selamat datang, ${finalUser.name}!`);
+                return finalUser;
+            }
             
-            console.log('✅ Formatted user:', formattedUser);
-            console.log('✅ Profile image saved:', formattedUser.profileImage);
+            throw new Error('Login gagal: data tidak lengkap');
             
-            localStorage.setItem('token', result.token);
-            localStorage.setItem('uad_user', JSON.stringify(formattedUser));
-            
-            setUser(formattedUser);
-            toast.success(`Selamat datang, ${formattedUser.name}!`);
-            return formattedUser;
+        } catch (error) {
+            console.error('❌ Login error in context:', error);
+            toast.error(error.message || 'Login gagal');
+            return null;
         }
-        
-        throw new Error('Login gagal: data tidak lengkap');
-        
-    } catch (error) {
-        console.error('❌ Login error in context:', error);
-        toast.error(error.message || 'Login gagal');
-        return null;
-    }
-};
+    };
 
     // ============ LOGOUT ============
     const logout = async () => {
@@ -196,22 +208,23 @@ export const AuthProvider = ({ children }) => {
             const result = await authService.updateProfile(updateData);
             
             if (result) {
+                // ✅ Ambil profile image terbaru
+                const latestImage = await fetchProfileImage();
+                
                 const updatedUser = { 
                     ...user, 
                     name, 
                     email,
-                    profileImage: profileImage !== undefined ? profileImage : user?.profileImage,
-                    profile_image: profileImage !== undefined ? profileImage : user?.profile_image
+                    profileImage: latestImage !== null ? latestImage : (profileImage !== undefined ? profileImage : user?.profileImage),
+                    profile_image: latestImage !== null ? latestImage : (profileImage !== undefined ? profileImage : user?.profile_image)
                 };
+                
+                console.log('✅ Updated user profile:', updatedUser);
                 
                 setUser(updatedUser);
                 localStorage.setItem('uad_user', JSON.stringify(updatedUser));
                 
-                if (profileImage !== undefined) {
-                    toast.success('Foto profil berhasil diperbarui');
-                } else {
-                    toast.success('Profil berhasil diperbarui');
-                }
+                toast.success('Profil berhasil diperbarui');
                 return true;
             }
             return false;
@@ -224,82 +237,86 @@ export const AuthProvider = ({ children }) => {
 
     // ============ UPLOAD PROFILE IMAGE ============
     const uploadProfileImage = async (file) => {
-    try {
-        const formData = new FormData();
-        formData.append('profileImage', file);
+        try {
+            const formData = new FormData();
+            formData.append('profileImage', file);
 
-        const token = localStorage.getItem('token');
-        const url = `${API_URL}/user/profile-image`;
-        
-        console.log('📸 Uploading to:', url);
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            body: formData
-        });
-
-        const data = await response.json();
-        console.log('📸 Upload response:', data);
-
-        if (response.ok) {
-            // ✅ Ambil URL dari berbagai kemungkinan response
-            const imageUrl = data?.data?.profileImage || 
-                            data?.data?.url || 
-                            data?.user?.profileImage || 
-                            data?.user?.profile_image || 
-                            data?.profileImage || 
-                            data?.url || 
-                            null;
+            const token = localStorage.getItem('token');
+            const url = `${API_URL}/user/profile-image`;
             
-            console.log('📸 Extracted imageUrl:', imageUrl);
+            console.log('📸 Uploading to:', url);
+            console.log('📸 File:', file.name, file.size, file.type);
             
-            if (imageUrl) {
-                // ✅ UPDATE USER DENGAN FOTO BARU
-                const updatedUser = {
-                    ...user,
-                    profileImage: imageUrl,
-                    profile_image: imageUrl
-                };
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            console.log('📸 Response status:', response.status);
+            
+            const data = await response.json();
+            console.log('📸 Upload response:', JSON.stringify(data, null, 2));
+
+            if (response.ok) {
+                // ✅ Ambil URL dari response
+                const imageUrl = data?.data?.profileImage || 
+                                data?.data?.url || 
+                                data?.user?.profileImage || 
+                                data?.user?.profile_image || 
+                                data?.profileImage || 
+                                data?.url || 
+                                null;
                 
-                console.log('📸 Updated user:', updatedUser);
+                console.log('📸 Extracted imageUrl:', imageUrl);
                 
-                setUser(updatedUser);
-                localStorage.setItem('uad_user', JSON.stringify(updatedUser));
-                
-                // ✅ Refresh profile dari database untuk memastikan
-                await refreshUser();
-                
-                toast.success('Foto profil berhasil diupload!');
-                return imageUrl;
+                if (imageUrl) {
+                    // ✅ Ambil profile image terbaru dari API untuk memastikan
+                    const latestImage = await fetchProfileImage();
+                    console.log('📸 Latest image from API:', latestImage);
+                    
+                    const finalImage = latestImage || imageUrl;
+                    
+                    // ✅ UPDATE USER DENGAN FOTO BARU
+                    const updatedUser = {
+                        ...user,
+                        profileImage: finalImage,
+                        profile_image: finalImage
+                    };
+                    
+                    console.log('📸 Updated user:', updatedUser);
+                    
+                    setUser(updatedUser);
+                    localStorage.setItem('uad_user', JSON.stringify(updatedUser));
+                    
+                    toast.success('Foto profil berhasil diupload!');
+                    return finalImage;
+                } else {
+                    console.error('❌ No image URL in response:', data);
+                    toast.error('Gagal mendapatkan URL foto');
+                    return null;
+                }
             } else {
-                console.error('❌ No image URL in response:', data);
-                toast.error('Gagal mendapatkan URL foto');
+                console.error('❌ Upload failed:', data);
+                toast.error(data.message || 'Gagal upload foto');
                 return null;
             }
-        } else {
-            toast.error(data.message || 'Gagal upload foto');
+        } catch (error) {
+            console.error('❌ Upload error:', error);
+            toast.error('Gagal terhubung ke server');
             return null;
         }
-    } catch (error) {
-        console.error('❌ Upload error:', error);
-        toast.error('Gagal terhubung ke server');
-        return null;
-    }
-};
-
+    };
 
     // ============ DELETE PROFILE IMAGE ============
     const deleteProfileImage = async () => {
         try {
             const token = localStorage.getItem('token');
+            console.log('🗑️ Deleting profile image...');
             
-            // ✅ Gunakan ENDPOINTS.profileImage
-            console.log('🗑️ Deleting from:', ENDPOINTS.profileImage);
-            
-            const response = await fetch(ENDPOINTS.profileImage, {
+            const response = await fetch(`${API_URL}/user/profile-image`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -310,11 +327,17 @@ export const AuthProvider = ({ children }) => {
             console.log('🗑️ Delete response:', data);
 
             if (response.ok) {
+                // ✅ Ambil profile image terbaru (harusnya null)
+                const latestImage = await fetchProfileImage();
+                console.log('📸 Latest image after delete:', latestImage);
+                
                 const updatedUser = {
                     ...user,
                     profileImage: null,
                     profile_image: null
                 };
+                
+                console.log('🗑️ Updated user after delete:', updatedUser);
                 
                 setUser(updatedUser);
                 localStorage.setItem('uad_user', JSON.stringify(updatedUser));
@@ -334,47 +357,48 @@ export const AuthProvider = ({ children }) => {
 
     // ============ REFRESH USER ============
     const refreshUser = async () => {
-    try {
-        const token = localStorage.getItem('token');
-        console.log('🔄 Refreshing user from database...');
-        
-        const response = await fetch(`${API_URL}/auth/profile`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            const userData = data.user || data;
-            console.log('🔄 User data from database:', userData);
-            console.log('🔄 Profile image from database:', userData.profile_image || userData.profileImage);
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return null;
+            
+            console.log('🔄 Refreshing user data...');
+            
+            // ✅ Ambil profile dari backend
+            const profile = await authService.getProfile();
+            if (!profile) return null;
+            
+            // ✅ Ambil profile image dari API
+            const profileImage = await fetchProfileImage();
+            console.log('📸 Profile image from refresh:', profileImage);
             
             const formattedUser = {
-                ...user,
-                id: userData.id || user?.id,
-                name: userData.name || userData.nama_lengkap || user?.name,
-                email: userData.email || user?.email,
-                role: userData.role || user?.role,
-                // ✅ AMBIL PROFILE IMAGE DARI DATABASE
-                profileImage: userData.profile_image || userData.profileImage || null,
-                profile_image: userData.profile_image || userData.profileImage || null
+                id: profile.id || profile.user_id || null,
+                name: profile.name || profile.nama_lengkap || user?.name || 'User',
+                email: profile.email || user?.email || '',
+                role: profile.role || user?.role || 'mahasiswa',
+                nim: profile.nim || profile.npm || null,
+                mahasiswa_id: profile.mahasiswa_id || null,
+                nama_lengkap: profile.nama_lengkap || profile.name || null,
+                semester: profile.semester || 1,
+                gpa: profile.gpa || null,
+                mahasiswa_status: profile.mahasiswa_status || 'aktif',
+                angkatan: profile.angkatan || null,
+                npm: profile.npm || null,
+                profileImage: profileImage,
+                profile_image: profileImage
             };
             
-            console.log('🔄 Formatted user:', formattedUser);
-            console.log('🔄 Profile image set:', formattedUser.profileImage);
+            console.log('🔄 Refreshed user:', formattedUser);
+            console.log('📸 Profile image refreshed:', formattedUser.profileImage);
             
             setUser(formattedUser);
             localStorage.setItem('uad_user', JSON.stringify(formattedUser));
             return formattedUser;
+        } catch (error) {
+            console.error('Refresh user error:', error);
+            return null;
         }
-        return null;
-    } catch (error) {
-        console.error('Refresh user error:', error);
-        return null;
-    }
-};
-
+    };
 
     // ============ CHANGE PASSWORD ============
     const changePassword = async (oldPassword, newPassword) => {
@@ -399,6 +423,7 @@ export const AuthProvider = ({ children }) => {
         deleteProfileImage,
         refreshUser,
         changePassword,
+        fetchProfileImage,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
         isKaprodi: user?.role === 'kaprodi',
