@@ -27,7 +27,15 @@ const DosenSkripsi = () => {
 
   // States for Add Dosen Modal
   const [isAddDosenModalOpen, setIsAddDosenModalOpen] = useState(false);
-  const [addDosenForm, setAddDosenForm] = useState({ nama: '', nip: '', email: '', bidang_keahlian: '', kuota: 10 });
+  const [addDosenForm, setAddDosenForm] = useState({ 
+    nama_lengkap: '', 
+    nip: '', 
+    email: '', 
+    bidang_keahlian: '', 
+    kuota: 10,
+    no_hp: '',
+    gelar: ''
+  });
   const [isSubmittingDosen, setIsSubmittingDosen] = useState(false);
 
   // States for Edit Modal
@@ -35,19 +43,77 @@ const DosenSkripsi = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [newDosenId, setNewDosenId] = useState('');
 
+  // ========== HELPER FUNCTIONS untuk mengatasi perbedaan field ==========
+  const getNamaDosen = (dosen) => {
+    return dosen?.nama_lengkap || dosen?.nama || 'Nama Dosen';
+  };
+
+  const getNipDosen = (dosen) => {
+    return dosen?.nip || dosen?.nidn || '-';
+  };
+
+  const getBidangDosen = (dosen) => {
+    return dosen?.bidang_keahlian || dosen?.bidang || '-';
+  };
+
+  const getKuotaDosen = (dosen) => {
+    return dosen?.kuota || 10;
+  };
+
+  const getBebanDosen = (dosen) => {
+    return dosen?.bebanBimbingan || dosen?.beban || 0;
+  };
+
+  const getNamaMahasiswa = (mhs) => {
+    return mhs?.nama || mhs?.nama_lengkap || 'Mahasiswa';
+  };
+
+  const getNimMahasiswa = (mhs) => {
+    return mhs?.nim || mhs?.nrp || '-';
+  };
+
+  const getJudulMahasiswa = (mhs) => {
+    return mhs?.judul || mhs?.judul_penelitian || '-';
+  };
+
+  const getStatusMahasiswa = (mhs) => {
+    return mhs?.status || mhs?.status_akhir || 'Belum Mulai';
+  };
+
+  const getTipeMahasiswa = (mhs) => {
+    return mhs?.tipe || mhs?.jenis || 'Skripsi';
+  };
+
+  const getDosenId = (dosen) => {
+    return dosen?.id || dosen?._id;
+  };
+  // ======================================================================
+
   const fetchDosen = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await apiService.getDosenData();
+      
+      // Debug: Lihat struktur data dari backend
+      console.log('📊 Data dosen dari backend:', data);
+      if (data && data.length > 0) {
+        console.log('📝 Sample dosen pertama:', data[0]);
+        console.log('🔑 Field yang tersedia:', Object.keys(data[0]));
+      }
+      
       setDosenList(data || []);
       
       if (selectedDosen) {
-        const updatedSelected = data.find(d => d.id === selectedDosen.id);
+        const updatedSelected = data.find(d => {
+          const id1 = d.id || d._id;
+          const id2 = selectedDosen.id || selectedDosen._id;
+          return id1 === id2;
+        });
         if (updatedSelected) setSelectedDosen(updatedSelected);
       }
     } catch (err) {
-      console.error('Error fetching dosen:', err);
+      console.error('❌ Error fetching dosen:', err);
       setError(err.message);
       toast.error(err.message);
     } finally {
@@ -69,18 +135,23 @@ const DosenSkripsi = () => {
   const getBidangOptions = () => {
     const bidangSet = new Set();
     dosenList.forEach(d => {
-      if (d.bidang_keahlian) {
-        bidangSet.add(d.bidang_keahlian);
+      const bidang = getBidangDosen(d);
+      if (bidang && bidang !== '-') {
+        bidangSet.add(bidang);
       }
     });
     return ['Semua Bidang', ...Array.from(bidangSet).sort()];
   };
 
   const filteredDosen = dosenList.filter((dosen) => {
+    const namaDosen = getNamaDosen(dosen).toLowerCase();
+    const nipDosen = getNipDosen(dosen);
+    const bidangDosen = getBidangDosen(dosen);
+    
     const matchSearch = 
-      (dosen.nama_lengkap?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (dosen.nip?.includes(searchTerm) || false);
-    const matchBidang = filterBidang === 'Semua Bidang' || dosen.bidang_keahlian === filterBidang;
+      namaDosen.includes(searchTerm.toLowerCase()) ||
+      nipDosen.includes(searchTerm);
+    const matchBidang = filterBidang === 'Semua Bidang' || bidangDosen === filterBidang;
     return matchSearch && matchBidang;
   });
 
@@ -107,7 +178,7 @@ const DosenSkripsi = () => {
 
   const handleAddDosenSubmit = async (e) => {
     e.preventDefault();
-    if (!addDosenForm.nama || !addDosenForm.nip || !addDosenForm.email) {
+    if (!addDosenForm.nama_lengkap || !addDosenForm.nip || !addDosenForm.email) {
       toast.error("Nama, NIP, dan Email wajib diisi.");
       return;
     }
@@ -117,12 +188,25 @@ const DosenSkripsi = () => {
       return;
     }
 
+    if (addDosenForm.kuota < 1) {
+      toast.error("Kapasitas minimal adalah 1.");
+      return;
+    }
+
     setIsSubmittingDosen(true);
     try {
       await apiService.addDosen(addDosenForm);
       toast.success("Berhasil menambahkan dosen baru.");
       setIsAddDosenModalOpen(false);
-      setAddDosenForm({ nama: '', nip: '', email: '', bidang_keahlian: '', kuota: 10 });
+      setAddDosenForm({ 
+        nama_lengkap: '', 
+        nip: '', 
+        email: '', 
+        bidang_keahlian: '', 
+        kuota: 10,
+        no_hp: '',
+        gelar: ''
+      });
       await fetchDosen();
     } catch (err) {
       toast.error(err.message || "Gagal menambahkan dosen.");
@@ -137,14 +221,17 @@ const DosenSkripsi = () => {
       toast.error("Silakan pilih dosen pembimbing baru.");
       return;
     }
-    if (newDosenId === selectedStudent?.dosenId) {
+    
+    const currentDosenId = selectedStudent?.dosenId || selectedStudent?.dosen_id;
+    if (newDosenId === currentDosenId) {
       toast.error("Mahasiswa sudah dibimbing oleh dosen ini.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await apiService.updatePembimbing(selectedStudent.nim, newDosenId);
+      const nimMahasiswa = getNimMahasiswa(selectedStudent);
+      await apiService.updatePembimbing(nimMahasiswa, newDosenId);
       toast.success("Berhasil memindahkan mahasiswa ke dosen baru.");
       setIsEditModalOpen(false);
       setSelectedStudent(null);
@@ -169,18 +256,23 @@ const DosenSkripsi = () => {
     setIsEditModalOpen(true);
   };
 
+  // Hitung statistik
   const totalDosen = dosenList.length;
   const avgLoad = totalDosen > 0 
     ? Math.round(
         dosenList.reduce((acc, d) => {
-          const beban = d.bebanBimbingan || 0;
-          const kuota = d.kuota || 10;
+          const beban = getBebanDosen(d);
+          const kuota = getKuotaDosen(d);
           return acc + (beban / kuota) * 100;
         }, 0) / totalDosen
       )
     : 0;
   
-  const overloaded = dosenList.filter((d) => (d.bebanBimbingan || 0) >= (d.kuota || 10)).length;
+  const overloaded = dosenList.filter((d) => {
+    const beban = getBebanDosen(d);
+    const kuota = getKuotaDosen(d);
+    return beban >= kuota;
+  }).length;
 
   if (loading && dosenList.length === 0) {
     return (
@@ -299,8 +391,8 @@ const DosenSkripsi = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredDosen.length > 0 ? (
           filteredDosen.map((dosen) => {
-            const beban = dosen.bebanBimbingan || 0;
-            const kuota = dosen.kuota || 10;
+            const beban = getBebanDosen(dosen);
+            const kuota = getKuotaDosen(dosen);
             const isOver = beban >= kuota;
             const isHigh = beban >= 8 && !isOver;
 
@@ -311,7 +403,7 @@ const DosenSkripsi = () => {
 
             return (
               <div
-                key={dosen.id}
+                key={getDosenId(dosen)}
                 onClick={() => openDosenDetail(dosen)}
                 className="group bg-white border border-[#d4eaf3] rounded-3xl p-6 relative overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#06446B]/10 flex flex-col"
               >
@@ -319,18 +411,18 @@ const DosenSkripsi = () => {
                 
                 <div className="flex gap-4 mb-6">
                   <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${avatarGrad} flex items-center justify-center text-xl font-bold text-white shrink-0 shadow-lg shadow-black/10`}>
-                    {dosen.nama_lengkap?.charAt(0) || '?'}
+                    {getNamaDosen(dosen).charAt(0) || '?'}
                   </div>
                   
                   <div className="flex-1 min-w-0 pr-2 pt-1">
-                    <div className="text-[15px] font-extrabold text-[#0f2740] line-clamp-2 leading-tight mb-1" title={dosen.nama_lengkap}>
-                      {dosen.nama_lengkap || 'Nama Dosen'}
+                    <div className="text-[15px] font-extrabold text-[#0f2740] line-clamp-2 leading-tight mb-1" title={getNamaDosen(dosen)}>
+                      {getNamaDosen(dosen)}
                     </div>
                     <div className="text-[11px] font-semibold text-[#6b8fa8] bg-[#f8fbfd] px-2.5 py-1 rounded-md border border-[#e8f6fa] w-max max-w-full truncate">
-                      NIDN: {dosen.nip || '-'}
+                      NIDN: {getNipDosen(dosen)}
                     </div>
                     <div className="text-[10px] font-semibold text-[#5790AB] bg-[#e8f6fa] px-2.5 py-1 rounded-md border border-[#d4eaf3] w-max max-w-full truncate mt-1">
-                      {dosen.bidang_keahlian || '-'}
+                      {getBidangDosen(dosen)}
                     </div>
                   </div>
                 </div>
@@ -379,13 +471,14 @@ const DosenSkripsi = () => {
               <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
               <div className="flex items-center gap-4 relative z-10">
                 <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white font-bold backdrop-blur-md text-xl shadow-inner border border-white/30">
-                  {selectedDosen.nama_lengkap?.charAt(0) || '?'}
+                  {getNamaDosen(selectedDosen).charAt(0) || '?'}
                 </div>
                 <div>
-                  <h3 className="text-white font-extrabold text-xl leading-tight">{selectedDosen.nama_lengkap}</h3>
+                  <h3 className="text-white font-extrabold text-xl leading-tight">{getNamaDosen(selectedDosen)}</h3>
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <p className="text-white/80 text-xs font-medium bg-black/10 px-2.5 py-0.5 rounded-md">NIDN: {selectedDosen.nip || '-'}</p>
-                    <p className="text-white/80 text-xs font-medium bg-black/10 px-2.5 py-0.5 rounded-md">{selectedDosen.bidang_keahlian || '-'}</p>
+                    <p className="text-white/80 text-xs font-medium bg-black/10 px-2.5 py-0.5 rounded-md">NIDN: {getNipDosen(selectedDosen)}</p>
+                    <p className="text-white/80 text-xs font-medium bg-black/10 px-2.5 py-0.5 rounded-md">{getBidangDosen(selectedDosen)}</p>
+                    <p className="text-white/80 text-xs font-medium bg-black/10 px-2.5 py-0.5 rounded-md">Kuota: {getKuotaDosen(selectedDosen)}</p>
                   </div>
                 </div>
               </div>
@@ -406,38 +499,39 @@ const DosenSkripsi = () => {
                   Daftar Mahasiswa Bimbingan
                 </h4>
                 <div className="text-xs font-bold px-4 py-2 bg-[#f1f8fb] border border-[#d4eaf3] rounded-xl text-[#06446B] shadow-inner">
-                  Total: {selectedDosen.bebanBimbingan || 0} / {selectedDosen.kuota || 10}
+                  Total: {getBebanDosen(selectedDosen)} / {getKuotaDosen(selectedDosen)}
                 </div>
               </div>
 
               {selectedDosen.mahasiswaBimbingan && selectedDosen.mahasiswaBimbingan.length > 0 ? (
                 <div className="space-y-4">
                   {selectedDosen.mahasiswaBimbingan.map((mhs) => {
-                    const isSkripsi = mhs.tipe === 'Skripsi' || mhs.id?.startsWith('S');
+                    const tipe = getTipeMahasiswa(mhs);
+                    const isSkripsi = tipe === 'Skripsi' || tipe?.startsWith('S');
                     const badgeClass = isSkripsi ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200';
                     return (
-                      <div key={mhs.nim} className="bg-white border border-[#d4eaf3] rounded-2xl p-5 hover:border-[#5790AB] transition-all hover:shadow-lg flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+                      <div key={getNimMahasiswa(mhs)} className="bg-white border border-[#d4eaf3] rounded-2xl p-5 hover:border-[#5790AB] transition-all hover:shadow-lg flex flex-col sm:flex-row gap-5 items-start sm:items-center">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2 flex-wrap">
-                            <span className="text-sm font-extrabold text-[#0f2740]">{mhs.nama || mhs.nama_lengkap}</span>
-                            <span className="text-xs px-2.5 py-1 bg-[#f8fbfd] border border-[#e8f6fa] rounded-lg text-[#6b8fa8] font-bold">{mhs.nim}</span>
+                            <span className="text-sm font-extrabold text-[#0f2740]">{getNamaMahasiswa(mhs)}</span>
+                            <span className="text-xs px-2.5 py-1 bg-[#f8fbfd] border border-[#e8f6fa] rounded-lg text-[#6b8fa8] font-bold">{getNimMahasiswa(mhs)}</span>
                             <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border shadow-sm ${badgeClass}`}>
-                              {isSkripsi ? 'Skripsi' : 'Capstone'}
+                              {tipe || 'Skripsi'}
                             </span>
                           </div>
                           <div className="text-xs text-[#6b8fa8] leading-relaxed line-clamp-2 mt-1">
-                            <span className="font-bold text-[#06446B]">Judul:</span> {mhs.judul || '-'}
+                            <span className="font-bold text-[#06446B]">Judul:</span> {getJudulMahasiswa(mhs)}
                           </div>
                           <div className="text-xs mt-3 flex items-center gap-2 font-bold">
                             <span className="text-[#6b8fa8]">Status Akhir:</span>
-                            <span className="bg-[#f1f8fb] px-3 py-1 rounded-lg border border-[#e8f6fa] text-[#06446B]">{mhs.status || 'Belum Mulai'}</span>
+                            <span className="bg-[#f1f8fb] px-3 py-1 rounded-lg border border-[#e8f6fa] text-[#06446B]">{getStatusMahasiswa(mhs)}</span>
                           </div>
                         </div>
                         
                         <div className="shrink-0 w-full sm:w-auto flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
                           {(user?.role === 'admin' || user?.role === 'kaprodi') && (
                             <button 
-                              onClick={(e) => openEditModal(e, mhs, selectedDosen.id)}
+                              onClick={(e) => openEditModal(e, mhs, getDosenId(selectedDosen))}
                               className="px-4 py-2.5 bg-white border border-[#d4eaf3] hover:border-orange-300 hover:bg-orange-50 text-orange-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto"
                             >
                               <Edit2 size={14} />
@@ -445,7 +539,7 @@ const DosenSkripsi = () => {
                             </button>
                           )}
                           <button 
-                            onClick={() => navigate(`/mahasiswa/${mhs.nim}`)}
+                            onClick={() => navigate(`/mahasiswa/${getNimMahasiswa(mhs)}`)}
                             className="px-4 py-2.5 bg-[#06446B] hover:bg-[#042e4a] text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-[#06446B]/20 flex items-center justify-center gap-2 w-full sm:w-auto"
                           >
                             <FileText size={14} />
@@ -547,12 +641,12 @@ const DosenSkripsi = () => {
                 >
                   <option value="">-- Pilih Dosen Pembimbing --</option>
                   {dosenList.map(d => {
-                    const beban = d.bebanBimbingan || 0;
-                    const kuota = d.kuota || 10;
+                    const beban = getBebanDosen(d);
+                    const kuota = getKuotaDosen(d);
                     const isFull = beban >= kuota;
                     return (
-                      <option key={d.id} value={d.id} disabled={isFull}>
-                        {d.nama_lengkap} ({beban}/{kuota}) {isFull ? '- Penuh' : ''}
+                      <option key={getDosenId(d)} value={getDosenId(d)} disabled={isFull}>
+                        {getNamaDosen(d)} ({beban}/{kuota}) {isFull ? '- Penuh' : ''}
                       </option>
                     );
                   })}
@@ -600,7 +694,7 @@ const DosenSkripsi = () => {
             <form onSubmit={handleEditSubmit} className="p-6 space-y-5">
               <div className="bg-[#f8fbfd] p-4 rounded-2xl border border-[#d4eaf3]">
                 <p className="text-xs text-[#6b8fa8] font-bold uppercase tracking-wider mb-1">Mahasiswa</p>
-                <p className="font-extrabold text-[#0f2740]">{selectedStudent.nama} <span className="font-medium text-[#6b8fa8]">({selectedStudent.nim})</span></p>
+                <p className="font-extrabold text-[#0f2740]">{getNamaMahasiswa(selectedStudent)} <span className="font-medium text-[#6b8fa8]">({getNimMahasiswa(selectedStudent)})</span></p>
               </div>
 
               <div>
@@ -613,14 +707,15 @@ const DosenSkripsi = () => {
                 >
                   <option value="">-- Pilih Dosen Pengganti --</option>
                   {dosenList.map(d => {
-                    const beban = d.bebanBimbingan || 0;
-                    const kuota = d.kuota || 10;
+                    const beban = getBebanDosen(d);
+                    const kuota = getKuotaDosen(d);
                     const isFull = beban >= kuota;
-                    const isCurrent = d.id === selectedStudent.dosenId;
+                    const currentDosenId = selectedStudent?.dosenId || selectedStudent?.dosen_id;
+                    const isCurrent = getDosenId(d) === currentDosenId;
                     
                     return (
-                      <option key={d.id} value={d.id} disabled={isFull || isCurrent}>
-                        {d.nama_lengkap} ({beban}/{kuota}) {isCurrent ? '- (Saat ini)' : isFull ? '- Penuh' : ''}
+                      <option key={getDosenId(d)} value={getDosenId(d)} disabled={isFull || isCurrent}>
+                        {getNamaDosen(d)} ({beban}/{kuota}) {isCurrent ? '- (Saat ini)' : isFull ? '- Penuh' : ''}
                       </option>
                     );
                   })}
@@ -667,11 +762,11 @@ const DosenSkripsi = () => {
 
             <form onSubmit={handleAddDosenSubmit} className="p-6 space-y-5">
               <div>
-                <label className="block text-xs font-extrabold text-[#06446B] mb-2 uppercase tracking-wide">Nama Dosen (Lengkap dengan Gelar)</label>
+                <label className="block text-xs font-extrabold text-[#06446B] mb-2 uppercase tracking-wide">Nama Lengkap (dengan Gelar)</label>
                 <input 
                   type="text" 
-                  value={addDosenForm.nama} 
-                  onChange={e => setAddDosenForm({...addDosenForm, nama: e.target.value})}
+                  value={addDosenForm.nama_lengkap} 
+                  onChange={e => setAddDosenForm({...addDosenForm, nama_lengkap: e.target.value})}
                   placeholder="Contoh: Dr. Ir. Budi Santoso, M.Kom."
                   className="w-full px-4 py-3 bg-[#f8fbfd] border border-[#d4eaf3] rounded-xl text-sm font-semibold focus:outline-none focus:border-[#5790AB] focus:ring-4 focus:ring-[#5790AB]/10 text-[#0f2740] transition-all placeholder:font-medium"
                   required
@@ -703,12 +798,34 @@ const DosenSkripsi = () => {
               </div>
 
               <div>
+                <label className="block text-xs font-extrabold text-[#06446B] mb-2 uppercase tracking-wide">Nomor HP</label>
+                <input 
+                  type="text" 
+                  value={addDosenForm.no_hp} 
+                  onChange={e => setAddDosenForm({...addDosenForm, no_hp: e.target.value})}
+                  placeholder="Contoh: 081234567890"
+                  className="w-full px-4 py-3 bg-[#f8fbfd] border border-[#d4eaf3] rounded-xl text-sm font-semibold focus:outline-none focus:border-[#5790AB] focus:ring-4 focus:ring-[#5790AB]/10 text-[#0f2740] transition-all placeholder:font-medium"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-extrabold text-[#06446B] mb-2 uppercase tracking-wide">Bidang Keahlian</label>
                 <input 
                   type="text" 
                   value={addDosenForm.bidang_keahlian} 
                   onChange={e => setAddDosenForm({...addDosenForm, bidang_keahlian: e.target.value})}
                   placeholder="Contoh: Sistem Informasi, Kecerdasan Buatan"
+                  className="w-full px-4 py-3 bg-[#f8fbfd] border border-[#d4eaf3] rounded-xl text-sm font-semibold focus:outline-none focus:border-[#5790AB] focus:ring-4 focus:ring-[#5790AB]/10 text-[#0f2740] transition-all placeholder:font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-[#06446B] mb-2 uppercase tracking-wide">Gelar</label>
+                <input 
+                  type="text" 
+                  value={addDosenForm.gelar} 
+                  onChange={e => setAddDosenForm({...addDosenForm, gelar: e.target.value})}
+                  placeholder="Contoh: S.Kom., M.T."
                   className="w-full px-4 py-3 bg-[#f8fbfd] border border-[#d4eaf3] rounded-xl text-sm font-semibold focus:outline-none focus:border-[#5790AB] focus:ring-4 focus:ring-[#5790AB]/10 text-[#0f2740] transition-all placeholder:font-medium"
                 />
               </div>
@@ -722,10 +839,12 @@ const DosenSkripsi = () => {
                   value={addDosenForm.kuota} 
                   onChange={e => {
                     const val = parseInt(e.target.value);
-                    if (val > 10) return;
-                    setAddDosenForm({...addDosenForm, kuota: val || ''})
+                    if (val > 10) {
+                      toast.error("Kapasitas maksimal adalah 10");
+                      return;
+                    }
+                    setAddDosenForm({...addDosenForm, kuota: val || 1})
                   }}
-                  placeholder="Maksimal 10"
                   className="w-full px-4 py-3 bg-[#f8fbfd] border border-[#d4eaf3] rounded-xl text-sm font-semibold focus:outline-none focus:border-[#5790AB] focus:ring-4 focus:ring-[#5790AB]/10 text-[#0f2740] transition-all placeholder:font-medium"
                   required
                 />
