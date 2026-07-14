@@ -1,8 +1,9 @@
+// BACKEND/server.js
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const http = require('http'); // ← TAMBAHKAN INI
-const { Server } = require('socket.io'); // ← TAMBAHKAN INI
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 const pool = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
@@ -101,8 +102,12 @@ app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     credentials: true
 }));
+
+// ✅ MIDDLEWARE UNTUK PARSING JSON DAN URLENCODED
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ✅ MIDDLEWARE UNTUK STATIC FILES (Uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ============ TEST DATABASE ============
@@ -134,7 +139,7 @@ app.get('/', (req, res) => {
             capstone: '/api/capstone',
             user: '/api/user',
             export: '/api/export',
-            notifications: '/api/notifications' // ← TAMBAHKAN INI
+            notifications: '/api/notifications'
         }
     });
 });
@@ -149,7 +154,7 @@ app.use('/api/evaluasi', evaluasiRoutes);
 app.use('/api/kurikulum', kurikulumRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/capstone', capstoneRoutes);
-app.use('/api/user', userRoutes);
+app.use('/api/user', userRoutes);  // ✅ Route user sudah termasuk profile-image
 app.use('/api/export', exportRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/nilai', nilaiRoutes);
@@ -171,5 +176,14 @@ server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
     console.log(`🔐 Auth endpoint: http://localhost:${PORT}/api/auth`);
+    console.log(`👤 User endpoint: http://localhost:${PORT}/api/user`);
+    console.log(`📸 Profile image: http://localhost:${PORT}/api/user/profile-image`);
     console.log(`🔌 Socket.IO running on port ${PORT}`);
+    
+    // Cek Cloudinary configuration
+    if (process.env.CLOUDINARY_CLOUD_NAME) {
+        console.log(`☁️ Cloudinary configured: ${process.env.CLOUDINARY_CLOUD_NAME}`);
+    } else {
+        console.warn('⚠️ Cloudinary credentials not found in environment variables');
+    }
 });
