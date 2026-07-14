@@ -228,7 +228,7 @@ const Settings = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   
   // State Foto Profil
-  const [profileImage, setProfileImage] = useState(user?.profileImage || user?.profile_image || null);
+  const [profileImage, setProfileImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
@@ -258,6 +258,54 @@ const Settings = () => {
     };
   };
 
+  // ============ FORCE REFRESH USER FROM DATABASE ============
+  const forceRefreshUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('🔄 Force refreshing user from database...');
+      
+      const response = await fetch(`${API_URL}/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const userData = data.user || data;
+        console.log('🔄 User data from database:', userData);
+        console.log('🔄 Profile image from database:', userData.profile_image || userData.profileImage);
+        
+        const formattedUser = {
+          ...user,
+          name: userData.name || userData.nama_lengkap || user?.name,
+          email: userData.email || user?.email,
+          role: userData.role || user?.role,
+          profileImage: userData.profile_image || userData.profileImage || null,
+          profile_image: userData.profile_image || userData.profileImage || null
+        };
+        
+        console.log('🔄 Formatted user:', formattedUser);
+        
+        // ✅ Update user di context dan localStorage
+        if (typeof refreshUser === 'function') {
+          await refreshUser();
+        }
+        
+        // ✅ Update state lokal
+        const image = formattedUser.profileImage || formattedUser.profile_image;
+        console.log('🔄 Setting profile image to:', image);
+        setProfileImage(image);
+        
+        return formattedUser;
+      }
+      return null;
+    } catch (error) {
+      console.error('Force refresh error:', error);
+      return null;
+    }
+  };
+
   // ============ FETCH PREFERENCES ============
   const fetchPreferences = async () => {
     try {
@@ -274,7 +322,6 @@ const Settings = () => {
         if (data.status === 'Success' && data.data) {
           setPreferences(data.data);
         } else {
-          // Set default jika data tidak lengkap
           setPreferences({
             mahasiswaBerisiko: true,
             updateCapstoneSkripsi: true,
@@ -284,7 +331,6 @@ const Settings = () => {
         }
       } else {
         console.error('Failed to fetch preferences:', response.status);
-        // Set default preferences jika error
         setPreferences({
           mahasiswaBerisiko: true,
           updateCapstoneSkripsi: true,
@@ -294,7 +340,6 @@ const Settings = () => {
       }
     } catch (error) {
       console.error('Error fetching preferences:', error);
-      // Set default preferences jika error
       setPreferences({
         mahasiswaBerisiko: true,
         updateCapstoneSkripsi: true,
@@ -338,14 +383,12 @@ const Settings = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validasi tipe file
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       toast.error('File harus berupa gambar (JPG, PNG, GIF, atau WEBP)');
       return;
     }
 
-    // Validasi ukuran file (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast.error('Ukuran file maksimal 2MB');
       return;
@@ -353,7 +396,6 @@ const Settings = () => {
 
     setSelectedFile(file);
     
-    // Buat preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviewImage(reader.result);
@@ -367,7 +409,10 @@ const Settings = () => {
       return;
     }
 
-    console.log('📸 Before upload:', { selectedFile: !!selectedFile, profileImage, user });
+    console.log('📸 Starting upload process...');
+    console.log('📸 Selected file:', selectedFile.name, selectedFile.size, selectedFile.type);
+    console.log('📸 Current user before upload:', user);
+    
     setIsUploadingPhoto(true);
     
     try {
@@ -375,6 +420,7 @@ const Settings = () => {
       console.log('📸 Upload result:', result);
       
       if (result) {
+        // ✅ Update state lokal dengan URL baru
         setProfileImage(result);
         setPreviewImage(null);
         setSelectedFile(null);
@@ -382,12 +428,24 @@ const Settings = () => {
           fileInputRef.current.value = '';
         }
         
-        // Refresh user data untuk memastikan konsistensi
-        await refreshUser();
-        console.log('📸 After refresh, user profileImage:', user?.profileImage);
+        // ✅ Force refresh dari database
+        console.log('📸 Force refreshing from database...');
+        const refreshed = await forceRefreshUser();
+        console.log('📸 Refreshed user:', refreshed);
+        
+        if (refreshed) {
+          const image = refreshed.profileImage || refreshed.profile_image || result;
+          console.log('📸 Final profile image:', image);
+          setProfileImage(image);
+        }
+        
+        toast.success('Foto profil berhasil diupload!');
+      } else {
+        console.error('❌ Upload returned no result');
+        toast.error('Gagal upload foto');
       }
     } catch (error) {
-      console.error('Error in handleUploadPhoto:', error);
+      console.error('❌ Error in handleUploadPhoto:', error);
       toast.error('Gagal upload foto');
     } finally {
       setIsUploadingPhoto(false);
@@ -409,7 +467,7 @@ const Settings = () => {
       const success = await deleteProfileImage();
       if (success) {
         setProfileImage(null);
-        await refreshUser();
+        await forceRefreshUser();
         toast.success('Foto profil berhasil dihapus');
       }
     } catch (error) {
@@ -442,12 +500,22 @@ const Settings = () => {
     if (user) {
       setNama(user.name || '');
       setEmail(user.email || '');
-      setProfileImage(user.profileImage || user.profile_image || null);
+      
+      // ✅ AMBIL PROFILE IMAGE DARI USER
+      const image = user.profileImage || user.profile_image || null;
+      console.log('🔄 Setting profile image from user:', image);
+      setProfileImage(image);
     }
   }, [user]);
 
   useEffect(() => {
     fetchPreferences();
+    // ✅ Load profile image setelah mount
+    if (user) {
+      const image = user.profileImage || user.profile_image || null;
+      console.log('🔄 Initial profile image load:', image);
+      setProfileImage(image);
+    }
   }, []);
 
   // ============ HANDLERS ============
@@ -462,7 +530,7 @@ const Settings = () => {
       const success = await updateUserProfile(nama, email);
       if (success) {
         setIsEditing(false);
-        await refreshUser();
+        await forceRefreshUser();
         toast.success('Profil berhasil diperbarui!');
       }
     } catch (error) {
@@ -529,6 +597,7 @@ const Settings = () => {
 
   // ============ GET CURRENT IMAGE ============
   const getCurrentImage = () => {
+    // Priority: previewImage > profileImage > user.profileImage > user.profile_image
     if (previewImage) return previewImage;
     if (profileImage) return profileImage;
     if (user?.profileImage) return user.profileImage;
@@ -651,8 +720,14 @@ const Settings = () => {
                       onError={(e) => {
                         console.error('❌ Image failed to load:', currentImage);
                         e.target.style.display = 'none';
-                        e.target.parentElement.textContent = user?.name?.charAt(0) ?? 'A';
-                        e.target.parentElement.style.background = avatarGradient;
+                        const parent = e.target.parentElement;
+                        if (parent) {
+                          parent.textContent = user?.name?.charAt(0) || 'A';
+                          parent.style.background = avatarGradient;
+                          parent.style.display = 'flex';
+                          parent.style.alignItems = 'center';
+                          parent.style.justifyContent = 'center';
+                        }
                       }}
                     />
                   ) : (
@@ -709,8 +784,14 @@ const Settings = () => {
                               onError={(e) => {
                                 console.error('❌ Image failed to load:', currentImage);
                                 e.target.style.display = 'none';
-                                e.target.parentElement.textContent = user?.name?.charAt(0) ?? 'A';
-                                e.target.parentElement.style.background = avatarGradient;
+                                const parent = e.target.parentElement;
+                                if (parent) {
+                                  parent.textContent = user?.name?.charAt(0) || 'A';
+                                  parent.style.background = avatarGradient;
+                                  parent.style.display = 'flex';
+                                  parent.style.alignItems = 'center';
+                                  parent.style.justifyContent = 'center';
+                                }
                               }}
                             />
                           ) : (

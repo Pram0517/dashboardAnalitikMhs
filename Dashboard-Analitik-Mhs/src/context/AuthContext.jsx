@@ -20,59 +20,67 @@ export const AuthProvider = ({ children }) => {
 
     // ============ CHECK SESSION ============
     useEffect(() => {
-        const checkSession = async () => {
-            const token = localStorage.getItem('token');
-            const savedUser = localStorage.getItem('uad_user');
-            
-            console.log('🔍 Checking session:', { token: !!token, savedUser: !!savedUser });
-            
-            if (token && savedUser) {
-                try {
-                    const userData = JSON.parse(savedUser);
-                    console.log('📦 Saved user data:', userData);
-                    
-                    if (userData && userData.role) {
-                        setUser(userData);
-                        setLoading(false);
-                        console.log('✅ User restored from localStorage:', userData.role);
-                        return;
-                    }
-                    
-                    const profile = await authService.getProfile();
-                    if (profile) {
-                        const formattedUser = {
-                            id: profile.id || profile.user_id || null,
-                            name: profile.name || profile.nama_lengkap || 'User',
-                            email: profile.email || '',
-                            role: profile.role || 'mahasiswa',
-                            nim: profile.nim || profile.npm || null,
-                            mahasiswa_id: profile.mahasiswa_id || null,
-                            nama_lengkap: profile.nama_lengkap || profile.name || null,
-                            semester: profile.semester || 1,
-                            gpa: profile.gpa || null,
-                            mahasiswa_status: profile.mahasiswa_status || 'aktif',
-                            angkatan: profile.angkatan || null,
-                            npm: profile.npm || null,
-                            profileImage: profile.profile_image || profile.profileImage || null,
-                            profile_image: profile.profile_image || profile.profileImage || null
-                        };
-                        setUser(formattedUser);
-                        localStorage.setItem('uad_user', JSON.stringify(formattedUser));
+    const checkSession = async () => {
+        const token = localStorage.getItem('token');
+        const savedUser = localStorage.getItem('uad_user');
+        
+        console.log('🔍 Checking session:', { token: !!token, savedUser: !!savedUser });
+        
+        if (token && savedUser) {
+            try {
+                const userData = JSON.parse(savedUser);
+                console.log('📦 Saved user data:', userData);
+                
+                if (userData && userData.role) {
+                    // ✅ PASTIKAN profileImage TERBACA
+                    if (userData.profileImage || userData.profile_image) {
+                        console.log('✅ Profile image found in localStorage:', userData.profileImage || userData.profile_image);
                     } else {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('uad_user');
+                        console.log('⚠️ No profile image in localStorage');
                     }
-                } catch (error) {
-                    console.error('Session check error:', error);
+                    setUser(userData);
+                    setLoading(false);
+                    return;
+                }
+                
+                // Jika data tidak valid, ambil dari backend
+                const profile = await authService.getProfile();
+                if (profile) {
+                    const formattedUser = {
+                        id: profile.id || profile.user_id || null,
+                        name: profile.name || profile.nama_lengkap || 'User',
+                        email: profile.email || '',
+                        role: profile.role || 'mahasiswa',
+                        nim: profile.nim || profile.npm || null,
+                        mahasiswa_id: profile.mahasiswa_id || null,
+                        nama_lengkap: profile.nama_lengkap || profile.name || null,
+                        semester: profile.semester || 1,
+                        gpa: profile.gpa || null,
+                        mahasiswa_status: profile.mahasiswa_status || 'aktif',
+                        angkatan: profile.angkatan || null,
+                        npm: profile.npm || null,
+                        // ✅ PASTIKAN profileImage DIAMBIL DARI DATABASE
+                        profileImage: profile.profile_image || profile.profileImage || null,
+                        profile_image: profile.profile_image || profile.profileImage || null
+                    };
+                    console.log('✅ Profile image from backend:', formattedUser.profileImage);
+                    setUser(formattedUser);
+                    localStorage.setItem('uad_user', JSON.stringify(formattedUser));
+                } else {
                     localStorage.removeItem('token');
                     localStorage.removeItem('uad_user');
                 }
+            } catch (error) {
+                console.error('Session check error:', error);
+                localStorage.removeItem('token');
+                localStorage.removeItem('uad_user');
             }
-            setLoading(false);
-        };
-        
-        checkSession();
-    }, []);
+        }
+        setLoading(false);
+    };
+    
+    checkSession();
+}, []);
 
     // ============ LOGIN ============
     const login = async (username, password) => {
