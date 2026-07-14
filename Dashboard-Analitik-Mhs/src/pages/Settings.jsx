@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Lock, Bell, Camera, Save, CheckCircle2, Mail, Shield, Eye, EyeOff, Loader } from 'lucide-react';
+import { User, Lock, Bell, Camera, Save, CheckCircle2, Mail, Shield, Eye, EyeOff, Loader, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // ============ [DESIGN TOKENS] ============
@@ -218,12 +218,19 @@ const ToggleSwitch = ({ defaultOn, onChange }) => {
 const Settings = () => {
   const { user, updateUserProfile } = useAuth();
   const [activeNav, setActiveNav] = useState('profil');
+  const fileInputRef = useRef(null);
 
   // State Profil
   const [isEditing, setIsEditing] = useState(false);
   const [nama, setNama] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  
+  // State Foto Profil
+  const [profileImage, setProfileImage] = useState(null); // URL string
+  const [selectedFile, setSelectedFile] = useState(null); // File object
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null); // Untuk preview sebelum upload
 
   // State Keamanan
   const [oldPassword, setOldPassword] = useState('');
@@ -289,11 +296,128 @@ const Settings = () => {
     }
   };
 
+  // ============ FOTO PROFIL FUNCTIONS ============
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validasi tipe file
+    if (!file.type.startsWith('image/')) {
+      toast.error('File harus berupa gambar');
+      return;
+    }
+
+    // Validasi ukuran file (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 2MB');
+      return;
+    }
+
+    setSelectedFile(file);
+    
+    // Buat preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!selectedFile) {
+      toast.error('Pilih foto terlebih dahulu');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('profileImage', selectedFile);
+
+      const response = await fetch(`${API_URL}/user/profile-image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setProfileImage(data.imageUrl || data.url);
+        setPreviewImage(null);
+        setSelectedFile(null);
+        toast.success('Foto profil berhasil diupload!');
+        
+        // Update user context jika ada
+        if (updateUserProfile) {
+          await updateUserProfile(nama, email, data.imageUrl || data.url);
+        }
+      } else {
+        toast.error(data.message || 'Gagal upload foto');
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast.error('Gagal terhubung ke server');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!profileImage && !user?.profileImage) {
+      toast.error('Tidak ada foto untuk dihapus');
+      return;
+    }
+
+    if (!window.confirm('Apakah Anda yakin ingin menghapus foto profil?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/user/profile-image`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setProfileImage(null);
+        toast.success('Foto profil berhasil dihapus');
+        
+        // Update user context
+        if (updateUserProfile) {
+          await updateUserProfile(nama, email, null);
+        }
+      } else {
+        const data = await response.json();
+        toast.error(data.message || 'Gagal menghapus foto');
+      }
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      toast.error('Gagal terhubung ke server');
+    }
+  };
+
+  const handleCancelUpload = () => {
+    setPreviewImage(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   // ============ EFFECTS ============
   useEffect(() => {
     if (user) {
       setNama(user.name || '');
       setEmail(user.email || '');
+      setProfileImage(user.profileImage || null);
     }
   }, [user]);
 
@@ -376,6 +500,14 @@ const Settings = () => {
     setPreferences(prev => ({ ...prev, [key]: value }));
   };
 
+  // ============ GET CURRENT IMAGE ============
+  const getCurrentImage = () => {
+    if (previewImage) return previewImage;
+    if (profileImage) return profileImage;
+    if (user?.profileImage) return user.profileImage;
+    return null;
+  };
+
   // ============ LOADING ============
   if (!user) {
     return (
@@ -409,6 +541,8 @@ const Settings = () => {
     );
   }
 
+  const currentImage = getCurrentImage();
+
   // ============ RENDER ============
   return (
     <>
@@ -422,6 +556,11 @@ const Settings = () => {
         .se2 { animation: settingsFadeUp 0.5s 0.07s cubic-bezier(.22,1,.36,1) both; }
         .se3 { animation: settingsFadeUp 0.5s 0.14s cubic-bezier(.22,1,.36,1) both; }
         .se4 { animation: settingsFadeUp 0.5s 0.21s cubic-bezier(.22,1,.36,1) both; }
+        @keyframes zoomIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .zoom-in { animation: zoomIn 0.2s cubic-bezier(.34,1.56,.64,1) both; }
       `}</style>
 
       <div style={{
@@ -469,14 +608,27 @@ const Settings = () => {
               }}>
                 <div style={{
                   width: '52px', height: '52px', borderRadius: '50%',
-                  background: avatarGradient,
+                  background: currentImage ? 'transparent' : avatarGradient,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '20px', fontWeight: 800, color: T.white,
                   boxShadow: `0 4px 16px rgba(6,68,107,0.28)`,
                   marginBottom: '8px',
                   border: `2.5px solid rgba(156,205,219,0.45)`,
+                  overflow: 'hidden',
                 }}>
-                  {user?.name?.charAt(0) ?? 'A'}
+                  {currentImage ? (
+                    <img 
+                      src={currentImage} 
+                      alt="Profile" 
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  ) : (
+                    user?.name?.charAt(0) ?? 'A'
+                  )}
                 </div>
                 <p style={{ fontSize: '13px', fontWeight: 700, color: T.navy, margin: 0 }}>
                   {user?.name ?? 'User'}
@@ -504,52 +656,164 @@ const Settings = () => {
               {activeNav === 'profil' && (
                 <>
                   <SectionCard title="Foto Profil" subtitle="Upload foto profil Anda" icon={Camera}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
                       <div style={{ position: 'relative', flexShrink: 0 }}>
                         <div style={{
                           width: '72px', height: '72px', borderRadius: '50%',
-                          background: avatarGradient,
+                          background: currentImage ? 'transparent' : avatarGradient,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: '26px', fontWeight: 800, color: T.white,
                           boxShadow: `0 6px 20px rgba(6,68,107,0.28)`,
                           border: `3px solid rgba(156,205,219,0.50)`,
+                          overflow: 'hidden',
+                          transition: 'all 0.3s ease',
                         }}>
-                          {user?.name?.charAt(0) ?? 'A'}
+                          {currentImage ? (
+                            <img 
+                              src={currentImage} 
+                              alt="Profile" 
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                              }}
+                            />
+                          ) : (
+                            user?.name?.charAt(0) ?? 'A'
+                          )}
                         </div>
-                        <div style={{
-                          position: 'absolute', bottom: 0, right: 0,
-                          width: '22px', height: '22px', borderRadius: '50%',
-                          background: T.mid,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          border: '2px solid white',
-                          boxShadow: '0 2px 6px rgba(6,68,107,0.20)',
-                        }}>
-                          <Camera size={10} color={T.white} strokeWidth={2.5} />
-                        </div>
+                        {previewImage && (
+                          <div style={{
+                            position: 'absolute', top: '-4px', right: '-4px',
+                            background: T.mid,
+                            borderRadius: '50%',
+                            padding: '2px',
+                          }}>
+                            <div style={{
+                              background: T.white,
+                              borderRadius: '50%',
+                              padding: '2px 4px',
+                              fontSize: '8px',
+                              fontWeight: 700,
+                              color: T.mid,
+                            }}>
+                              PREVIEW
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <button
-                          style={{
-                            padding: '9px 20px', borderRadius: '12px', fontSize: '13px',
-                            fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.1px',
-                            background: `linear-gradient(135deg, ${T.mid} 0%, ${T.navy} 100%)`,
-                            color: T.white, border: 'none',
-                            boxShadow: '0 4px 14px rgba(6,68,107,0.28)',
-                            transition: 'transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s ease',
-                            fontFamily: "'Poppins', system-ui",
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(6,68,107,0.36)';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 4px 14px rgba(6,68,107,0.28)';
-                          }}
-                        >
-                          Ubah Foto
-                        </button>
-                        <p style={{ fontSize: '11px', color: T.muted, margin: 0, fontWeight: 450 }}>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileSelect}
+                            style={{ display: 'none' }}
+                            id="profile-image-input"
+                          />
+                          <label
+                            htmlFor="profile-image-input"
+                            style={{
+                              padding: '9px 20px', borderRadius: '12px', fontSize: '13px',
+                              fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.1px',
+                              background: `linear-gradient(135deg, ${T.mid} 0%, ${T.navy} 100%)`,
+                              color: T.white, border: 'none',
+                              boxShadow: '0 4px 14px rgba(6,68,107,0.28)',
+                              transition: 'transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s ease',
+                              fontFamily: "'Poppins', system-ui",
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 8px 20px rgba(6,68,107,0.36)';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 4px 14px rgba(6,68,107,0.28)';
+                            }}
+                          >
+                            <Camera size={14} />
+                            Pilih Foto
+                          </label>
+                          
+                          {currentImage && !previewImage && (
+                            <button
+                              onClick={handleRemovePhoto}
+                              style={{
+                                padding: '9px 16px', borderRadius: '12px', fontSize: '13px',
+                                fontWeight: 700, cursor: 'pointer',
+                                background: 'transparent',
+                                color: '#dc2626', border: '1.5px solid #dc2626',
+                                transition: 'all 0.2s',
+                                fontFamily: "'Poppins', system-ui",
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.background = 'rgba(220,38,38,0.08)';
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                            >
+                              <X size={14} />
+                              Hapus
+                            </button>
+                          )}
+                        </div>
+                        
+                        {previewImage && (
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              onClick={handleUploadPhoto}
+                              disabled={isUploadingPhoto}
+                              style={{
+                                padding: '9px 20px', borderRadius: '12px', fontSize: '13px',
+                                fontWeight: 700, cursor: isUploadingPhoto ? 'not-allowed' : 'pointer',
+                                background: isUploadingPhoto ? '#9CCDDB' : `linear-gradient(135deg, #22c55e 0%, #16a34a 100%)`,
+                                color: T.white, border: 'none',
+                                boxShadow: '0 4px 14px rgba(34,197,94,0.30)',
+                                transition: 'transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s ease',
+                                fontFamily: "'Poppins', system-ui",
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                opacity: isUploadingPhoto ? 0.7 : 1,
+                              }}
+                            >
+                              {isUploadingPhoto ? (
+                                <Loader size={14} className="animate-spin" />
+                              ) : (
+                                <Save size={14} />
+                              )}
+                              {isUploadingPhoto ? 'Uploading...' : 'Upload Foto'}
+                            </button>
+                            <button
+                              onClick={handleCancelUpload}
+                              style={{
+                                padding: '9px 16px', borderRadius: '12px', fontSize: '13px',
+                                fontWeight: 700, cursor: 'pointer',
+                                background: 'transparent',
+                                color: T.muted, border: '1.5px solid rgba(156,205,219,0.40)',
+                                transition: 'all 0.2s',
+                                fontFamily: "'Poppins', system-ui",
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                            >
+                              <X size={14} />
+                              Batal
+                            </button>
+                          </div>
+                        )}
+                        
+                        <p style={{ fontSize: '11px', color: T.muted, margin: '4px 0 0', fontWeight: 450 }}>
                           JPG, PNG max 2MB. Akan ditampilkan di profil Anda.
                         </p>
                       </div>
