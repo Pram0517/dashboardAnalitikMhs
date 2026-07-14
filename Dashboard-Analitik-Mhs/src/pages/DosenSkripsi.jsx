@@ -315,14 +315,6 @@ const DosenSkripsi = () => {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <button 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-[#d4eaf3] text-[#06446B] rounded-xl text-sm font-bold shadow-sm hover:border-[#5790AB] transition-all hover:-translate-y-0.5 disabled:opacity-50"
-          >
-            <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-            {isRefreshing ? 'Memuat...' : 'Refresh'}
-          </button>
           {(user?.role === 'admin' || user?.role === 'kaprodi') && (
             <>
               <button 
