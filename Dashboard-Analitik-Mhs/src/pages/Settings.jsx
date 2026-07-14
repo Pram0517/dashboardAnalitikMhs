@@ -1,6 +1,7 @@
 // FRONTEND/src/pages/Settings.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { API_URL, ENDPOINTS } from '../config/api';
 import { User, Lock, Bell, Camera, Save, CheckCircle2, Mail, Shield, Eye, EyeOff, Loader, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -249,20 +250,7 @@ const Settings = () => {
   const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-  // ============ MONITOR STATE CHANGES ============
-  useEffect(() => {
-    console.log('🔄 Settings state updated:', {
-      profileImage,
-      userProfileImage: user?.profileImage,
-      userProfile_image: user?.profile_image,
-      previewImage,
-      selectedFile: !!selectedFile
-    });
-  }, [profileImage, user, previewImage, selectedFile]);
-
-  // ============ API CALLS ============
+  // ============ GET AUTH HEADERS ============
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     return {
@@ -270,29 +258,59 @@ const Settings = () => {
     };
   };
 
+  // ============ FETCH PREFERENCES ============
   const fetchPreferences = async () => {
     try {
-      const response = await fetch(`${API_URL}/user/preferences`, {
+      console.log('📡 Fetching preferences from:', ENDPOINTS.preferences);
+      const response = await fetch(ENDPOINTS.preferences, {
         headers: getAuthHeaders()
       });
       
+      console.log('📡 Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📡 Preferences data:', data);
         if (data.status === 'Success' && data.data) {
           setPreferences(data.data);
+        } else {
+          // Set default jika data tidak lengkap
+          setPreferences({
+            mahasiswaBerisiko: true,
+            updateCapstoneSkripsi: true,
+            laporanMingguan: false,
+            uploadKHSBerhasil: true
+          });
         }
+      } else {
+        console.error('Failed to fetch preferences:', response.status);
+        // Set default preferences jika error
+        setPreferences({
+          mahasiswaBerisiko: true,
+          updateCapstoneSkripsi: true,
+          laporanMingguan: false,
+          uploadKHSBerhasil: true
+        });
       }
     } catch (error) {
       console.error('Error fetching preferences:', error);
+      // Set default preferences jika error
+      setPreferences({
+        mahasiswaBerisiko: true,
+        updateCapstoneSkripsi: true,
+        laporanMingguan: false,
+        uploadKHSBerhasil: true
+      });
     } finally {
       setIsLoadingPrefs(false);
     }
   };
 
+  // ============ SAVE PREFERENCES ============
   const savePreferences = async () => {
     setIsSavingPreferences(true);
     try {
-      const response = await fetch(`${API_URL}/user/preferences`, {
+      const response = await fetch(ENDPOINTS.preferences, {
         method: 'PUT',
         headers: {
           ...getAuthHeaders(),
@@ -308,6 +326,7 @@ const Settings = () => {
         toast.error(error.message || 'Gagal menyimpan preferensi');
       }
     } catch (error) {
+      console.error('Error saving preferences:', error);
       toast.error('Gagal terhubung ke server');
     } finally {
       setIsSavingPreferences(false);
@@ -348,7 +367,7 @@ const Settings = () => {
       return;
     }
 
-    console.log('📸 Before upload:', { selectedFile, profileImage, user });
+    console.log('📸 Before upload:', { selectedFile: !!selectedFile, profileImage, user });
     setIsUploadingPhoto(true);
     
     try {
@@ -365,7 +384,7 @@ const Settings = () => {
         
         // Refresh user data untuk memastikan konsistensi
         await refreshUser();
-        console.log('📸 After refresh:', { user: user?.profileImage });
+        console.log('📸 After refresh, user profileImage:', user?.profileImage);
       }
     } catch (error) {
       console.error('Error in handleUploadPhoto:', error);
@@ -391,6 +410,7 @@ const Settings = () => {
       if (success) {
         setProfileImage(null);
         await refreshUser();
+        toast.success('Foto profil berhasil dihapus');
       }
     } catch (error) {
       console.error('Error in handleRemovePhoto:', error);
@@ -405,6 +425,17 @@ const Settings = () => {
       fileInputRef.current.value = '';
     }
   };
+
+  // ============ MONITOR STATE CHANGES ============
+  useEffect(() => {
+    console.log('🔄 Settings state updated:', {
+      profileImage,
+      userProfileImage: user?.profileImage,
+      userProfile_image: user?.profile_image,
+      previewImage: !!previewImage,
+      selectedFile: !!selectedFile
+    });
+  }, [profileImage, user, previewImage, selectedFile]);
 
   // ============ EFFECTS ============
   useEffect(() => {
@@ -435,6 +466,7 @@ const Settings = () => {
         toast.success('Profil berhasil diperbarui!');
       }
     } catch (error) {
+      console.error('Error saving profile:', error);
       toast.error(error.message || 'Gagal memperbarui profil');
     } finally {
       setIsSavingProfile(false);
@@ -484,6 +516,7 @@ const Settings = () => {
         toast.error(data.message || 'Gagal mengubah password');
       }
     } catch (error) {
+      console.error('Error changing password:', error);
       toast.error('Gagal terhubung ke server');
     } finally {
       setIsChangingPassword(false);
@@ -615,6 +648,12 @@ const Settings = () => {
                         height: '100%',
                         objectFit: 'cover',
                       }}
+                      onError={(e) => {
+                        console.error('❌ Image failed to load:', currentImage);
+                        e.target.style.display = 'none';
+                        e.target.parentElement.textContent = user?.name?.charAt(0) ?? 'A';
+                        e.target.parentElement.style.background = avatarGradient;
+                      }}
                     />
                   ) : (
                     user?.name?.charAt(0) ?? 'A'
@@ -666,6 +705,12 @@ const Settings = () => {
                                 width: '100%',
                                 height: '100%',
                                 objectFit: 'cover',
+                              }}
+                              onError={(e) => {
+                                console.error('❌ Image failed to load:', currentImage);
+                                e.target.style.display = 'none';
+                                e.target.parentElement.textContent = user?.name?.charAt(0) ?? 'A';
+                                e.target.parentElement.style.background = avatarGradient;
                               }}
                             />
                           ) : (
