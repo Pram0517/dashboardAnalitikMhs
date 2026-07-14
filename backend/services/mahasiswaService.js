@@ -254,7 +254,7 @@ const getMahasiswaBySemester = async (semester, limit = 10, offset = 0) => {
   };
 };
 
-// ============ GET ALL MAHASISWA WITH SKS AND ANGKATAN ============
+// ============ GET ALL MAHASISWA WITH SKS AND ANGKATAN (FIXED) ============
 const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', filterStatus = '') => {
   let whereClause = '1=1';
   const params = [];
@@ -272,22 +272,30 @@ const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', f
     paramIndex++;
   }
 
+  // ✅ FIX: Gunakan subquery untuk total_sks
   const query = `
     SELECT 
       m.id,
+      m.npm,
       m.npm as nim,
+      m.nama_lengkap,
       m.nama_lengkap as nama,
       m.angkatan,
-      m.gpa as ipk,
+      m.ipk,
+      m.gpa,
       m.semester,
       m.status,
-      COALESCE(SUM(n.sks), 0) as total_sks,
-      COUNT(n.id) as total_mk
+      COALESCE(
+        (SELECT SUM(n.sks) FROM nilai_mahasiswa n WHERE n.mahasiswa_id = m.id),
+        0
+      ) as total_sks,
+      (SELECT COUNT(n.id) FROM nilai_mahasiswa n WHERE n.mahasiswa_id = m.id) as total_mk,
+      u.email,
+      u.name as user_name
     FROM mahasiswa m
-    LEFT JOIN nilai_mahasiswa n ON m.id = n.mahasiswa_id
+    LEFT JOIN users u ON m.user_id = u.id
     WHERE ${whereClause}
-    GROUP BY m.id, m.npm, m.nama_lengkap, m.angkatan, m.gpa, m.semester, m.status
-    ORDER BY m.created_at DESC
+    ORDER BY m.npm
     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
   `;
 
@@ -295,7 +303,6 @@ const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', f
 
   const result = await pool.query(query, params);
 
-  // Count total
   const countQuery = `
     SELECT COUNT(*) as total
     FROM mahasiswa m
@@ -310,19 +317,25 @@ const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', f
   };
 };
 
-// ============ GET MAHASISWA BY NIM WITH DETAILS ============
+// ============ GET MAHASISWA BY NIM WITH DETAILS (FIXED) ============
 const getMahasiswaByNimWithDetails = async (nim) => {
   const query = `
     SELECT 
       m.id,
+      m.npm,
       m.npm as nim,
+      m.nama_lengkap,
       m.nama_lengkap as nama,
       m.angkatan,
-      m.gpa as ipk,
+      m.ipk,
+      m.gpa,
       m.semester,
       m.status,
-      COALESCE(SUM(n.sks), 0) as total_sks,
-      COUNT(n.id) as total_mk,
+      COALESCE(
+        (SELECT SUM(n.sks) FROM nilai_mahasiswa n WHERE n.mahasiswa_id = m.id),
+        0
+      ) as total_sks,
+      (SELECT COUNT(n.id) FROM nilai_mahasiswa n WHERE n.mahasiswa_id = m.id) as total_mk,
       COALESCE(
         json_agg(
           json_build_object(
@@ -341,7 +354,7 @@ const getMahasiswaByNimWithDetails = async (nim) => {
     FROM mahasiswa m
     LEFT JOIN nilai_mahasiswa n ON m.id = n.mahasiswa_id
     WHERE m.npm = $1
-    GROUP BY m.id, m.npm, m.nama_lengkap, m.angkatan, m.gpa, m.semester, m.status
+    GROUP BY m.id, m.npm, m.nama_lengkap, m.angkatan, m.ipk, m.gpa, m.semester, m.status
   `;
   const result = await pool.query(query, [nim]);
   return result.rows[0];
@@ -350,6 +363,8 @@ const getMahasiswaByNimWithDetails = async (nim) => {
 // ============ GET ALL MAHASISWA FROM SUPABASE KHS ============
 const getAllFromKHS = async (limit = 10, offset = 0, search = '', filterStatus = '') => {
   try {
+    // Note: supabaseKhs needs to be defined/imported
+    const supabaseKhs = require('../config/supabase');
     let query = supabaseKhs
       .from('mhs_khs')
       .select('*', { count: 'exact' });
@@ -370,7 +385,6 @@ const getAllFromKHS = async (limit = 10, offset = 0, search = '', filterStatus =
 
     if (error) throw error;
 
-    // Transform data to match expected format
     const transformedData = (data || []).map(item => ({
       id: item.id,
       nim: item.nim,
@@ -381,7 +395,7 @@ const getAllFromKHS = async (limit = 10, offset = 0, search = '', filterStatus =
       semester: item.semester || 1,
       status: item.status || 'Aktif',
       total_sks: item.total_sks || 0,
-      nilai: [] // Will be populated separately if needed
+      nilai: []
     }));
 
     return {
@@ -397,6 +411,7 @@ const getAllFromKHS = async (limit = 10, offset = 0, search = '', filterStatus =
 // ============ GET MAHASISWA BY NIM FROM KHS ============
 const getMahasiswaFromKHSByNim = async (nim) => {
   try {
+    const supabaseKhs = require('../config/supabase');
     const { data, error } = await supabaseKhs
       .from('mhs_khs')
       .select('*')
@@ -427,13 +442,13 @@ module.exports = {
   getMahasiswaByProdi,
   getMahasiswaById,
   getMahasiswaByNPM,
-  getMahasiswaByNim,        // ← alias untuk getMahasiswaByNPM
+  getMahasiswaByNim,
   getMahasiswaWithUser,
   createMahasiswa,
   updateMahasiswa,
-  updateMahasiswaByNpm,     // ← UPDATE pakai NPM
+  updateMahasiswaByNpm,
   deleteMahasiswa,
-  deleteMahasiswaByNpm,     // ← DELETE pakai NPM
+  deleteMahasiswaByNpm,
   searchMahasiswa,
   getMahasiswaBySemester,
   getAllMahasiswaWithDetails,

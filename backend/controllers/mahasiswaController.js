@@ -84,7 +84,6 @@ const update = async (req, res) => {
     const userRole = req.user.role;
     const userNim = req.user.nim;
 
-    // Mahasiswa hanya bisa update data sendiri
     if (userRole === 'mahasiswa' && userNim !== nim) {
       return res.status(HTTP_STATUS.FORBIDDEN).json(
         formatResponse('Error', 'Anda hanya bisa mengupdate data sendiri')
@@ -119,131 +118,97 @@ const deleteMahasiswa = async (req, res) => {
   }
 };
 
-const pool = require('../config/database');
-
-// ============ GET ALL MAHASISWA WITH DETAILS ============
+// ============ GET ALL MAHASISWA WITH DETAILS (FIXED) ============
 const getAllWithDetails = async (req, res) => {
-    try {
-        const { page = 1, limit = 10, search = '', filterStatus = '' } = req.query;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+    const filterStatus = req.query.filterStatus || '';
 
-        let whereClause = '1=1';
-        const params = [];
-        let paramIndex = 1;
+    const result = await mahasiswaService.getAllMahasiswaWithDetails(
+      limit,
+      offset,
+      search,
+      filterStatus
+    );
 
-        if (search) {
-            whereClause += ` AND (m.npm ILIKE $${paramIndex} OR m.nama_lengkap ILIKE $${paramIndex})`;
-            params.push(`%${search}%`);
-            paramIndex++;
-        }
+    // ✅ Format data agar sesuai dengan frontend
+    const formattedData = result.data.map(item => ({
+      id: item.id,
+      npm: item.npm,
+      nim: item.nim || item.npm,
+      nama_lengkap: item.nama_lengkap,
+      nama: item.nama_lengkap,
+      angkatan: item.angkatan,
+      ipk: parseFloat(item.ipk) || 0,
+      semester: item.semester || 1,
+      status: item.status || 'aktif',
+      total_sks: parseInt(item.total_sks) || 0,
+      total_mk: parseInt(item.total_mk) || 0,
+      email: item.email,
+      user_name: item.user_name
+    }));
 
-        if (filterStatus && filterStatus !== 'Semua') {
-            whereClause += ` AND m.status = $${paramIndex}`;
-            params.push(filterStatus);
-            paramIndex++;
-        }
-
-        // ✅ QUERY DENGAN IPK DAN TOTAL_SKS
-        const query = `
-            SELECT 
-                m.id,
-                m.npm,
-                m.nama_lengkap,
-                m.angkatan,
-                m.ipk,
-                m.gpa,
-                m.semester,
-                m.total_sks,
-                m.status,
-                u.email,
-                u.name as user_name
-            FROM mahasiswa m
-            LEFT JOIN users u ON m.user_id = u.id
-            WHERE ${whereClause}
-            ORDER BY m.npm
-            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-        `;
-
-        const countQuery = `
-            SELECT COUNT(*) as total
-            FROM mahasiswa m
-            WHERE ${whereClause}
-        `;
-
-        params.push(parseInt(limit), offset);
-
-        const [result, countResult] = await Promise.all([
-            pool.query(query, params),
-            pool.query(countQuery, params.slice(0, -2))
-        ]);
-
-        res.status(200).json({
-            status: 'Success',
-            data: result.rows,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: parseInt(countResult.rows[0].total),
-                pages: Math.ceil(countResult.rows[0].total / parseInt(limit))
-            }
-        });
-
-    } catch (error) {
-        console.error('❌ Error in getAllWithDetails:', error);
-        res.status(500).json({
-            status: 'Error',
-            message: error.message || 'Gagal mengambil data mahasiswa'
-        });
-    }
+    res.status(HTTP_STATUS.OK).json({
+      status: 'Success',
+      data: formattedData,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: result.total,
+        pages: Math.ceil(result.total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error in getAllWithDetails:', error);
+    res.status(HTTP_STATUS.INTERNAL_ERROR).json({
+      status: 'Error',
+      message: error.message || 'Gagal mengambil data mahasiswa'
+    });
+  }
 };
 
-// ============ GET MAHASISWA BY NIM WITH DETAILS ============
+// ============ GET MAHASISWA BY NIM WITH DETAILS (FIXED) ============
 const getByNimWithDetails = async (req, res) => {
-    try {
-        const { nim } = req.params;
+  try {
+    const { nim } = req.params;
 
-        // ✅ QUERY DENGAN IPK DAN TOTAL_SKS
-        const query = `
-            SELECT 
-                m.id,
-                m.npm,
-                m.nama_lengkap,
-                m.angkatan,
-                m.ipk,
-                m.gpa,
-                m.semester,
-                m.total_sks,
-                m.status,
-                u.email,
-                u.name as user_name
-            FROM mahasiswa m
-            LEFT JOIN users u ON m.user_id = u.id
-            WHERE m.npm = $1
-        `;
+    const mahasiswa = await mahasiswaService.getMahasiswaByNimWithDetails(nim);
 
-        const result = await pool.query(query, [nim]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                status: 'Error',
-                message: 'Mahasiswa tidak ditemukan'
-            });
-        }
-
-        res.status(200).json({
-            status: 'Success',
-            data: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error('❌ Error in getByNimWithDetails:', error);
-        res.status(500).json({
-            status: 'Error',
-            message: error.message || 'Gagal mengambil data mahasiswa'
-        });
+    if (!mahasiswa) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json(
+        formatResponse('Error', 'Mahasiswa tidak ditemukan')
+      );
     }
-};
 
+    // ✅ Format data
+    const formattedData = {
+      id: mahasiswa.id,
+      npm: mahasiswa.npm,
+      nim: mahasiswa.nim || mahasiswa.npm,
+      nama_lengkap: mahasiswa.nama_lengkap,
+      nama: mahasiswa.nama_lengkap,
+      angkatan: mahasiswa.angkatan,
+      ipk: parseFloat(mahasiswa.ipk) || 0,
+      semester: mahasiswa.semester || 1,
+      status: mahasiswa.status || 'aktif',
+      total_sks: parseInt(mahasiswa.total_sks) || 0,
+      total_mk: parseInt(mahasiswa.total_mk) || 0,
+      nilai: mahasiswa.nilai || []
+    };
+
+    res.status(HTTP_STATUS.OK).json(
+      formatResponse('Success', 'Data mahasiswa berhasil diambil', formattedData)
+    );
+  } catch (error) {
+    console.error('❌ Error in getByNimWithDetails:', error);
+    res.status(HTTP_STATUS.INTERNAL_ERROR).json(
+      formatResponse('Error', error.message)
+    );
+  }
+};
 
 module.exports = {
   getAll,
