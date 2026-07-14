@@ -255,7 +255,7 @@ const getMahasiswaBySemester = async (semester, limit = 10, offset = 0) => {
 };
 
 // ============ GET ALL MAHASISWA WITH SKS AND ANGKATAN (FIXED) ============
-const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', filterStatus = '') => {
+const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', filterStatus = '', filterAngkatan = '') => {
   let whereClause = '1=1';
   const params = [];
   let paramIndex = 1;
@@ -272,7 +272,13 @@ const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', f
     paramIndex++;
   }
 
-  // ✅ FIX: Gunakan subquery untuk total_sks
+  // ✅ TAMBAHKAN FILTER ANGKATAN
+  if (filterAngkatan && filterAngkatan !== 'Semua Angkatan') {
+    whereClause += ` AND m.angkatan = $${paramIndex}::integer`;
+    params.push(parseInt(filterAngkatan));
+    paramIndex++;
+  }
+
   const query = `
     SELECT 
       m.id,
@@ -316,6 +322,7 @@ const getAllMahasiswaWithDetails = async (limit = 10, offset = 0, search = '', f
     total: parseInt(countResult.rows[0].total)
   };
 };
+
 
 // ============ GET MAHASISWA BY NIM WITH DETAILS (FIXED) ============
 const getMahasiswaByNimWithDetails = async (nim) => {
