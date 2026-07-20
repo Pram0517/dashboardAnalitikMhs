@@ -1,3 +1,4 @@
+// BACKEND/controllers/mahasiswaController.js
 const mahasiswaService = require('../services/mahasiswaService');
 const { formatResponse, formatPaginationResponse } = require('../utils/formatters');
 const { HTTP_STATUS } = require('../utils/constants');
@@ -47,6 +48,12 @@ const getById = async (req, res) => {
     const { nim } = req.params;
     const mahasiswa = await mahasiswaService.getMahasiswaByNPM(nim);
 
+    if (!mahasiswa) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json(
+        formatResponse('Error', 'Mahasiswa tidak ditemukan')
+      );
+    }
+
     res.status(HTTP_STATUS.OK).json(
       formatResponse('Success', 'Data mahasiswa berhasil diambil', mahasiswa)
     );
@@ -92,6 +99,12 @@ const update = async (req, res) => {
 
     const mahasiswa = await mahasiswaService.updateMahasiswaByNpm(nim, req.body);
 
+    if (!mahasiswa) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json(
+        formatResponse('Error', 'Mahasiswa tidak ditemukan')
+      );
+    }
+
     res.status(HTTP_STATUS.OK).json(
       formatResponse('Success', 'Data mahasiswa berhasil diupdate', mahasiswa)
     );
@@ -106,7 +119,13 @@ const update = async (req, res) => {
 const deleteMahasiswa = async (req, res) => {
   try {
     const { nim } = req.params;
-    await mahasiswaService.deleteMahasiswaByNpm(nim);
+    const deleted = await mahasiswaService.deleteMahasiswaByNpm(nim);
+
+    if (!deleted) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json(
+        formatResponse('Error', 'Mahasiswa tidak ditemukan')
+      );
+    }
 
     res.status(HTTP_STATUS.OK).json(
       formatResponse('Success', 'Data mahasiswa berhasil dihapus')
@@ -118,7 +137,7 @@ const deleteMahasiswa = async (req, res) => {
   }
 };
 
-// ============ GET ALL MAHASISWA WITH DETAILS (FIXED) ============
+// ============ GET ALL MAHASISWA WITH DETAILS ============
 const getAllWithDetails = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -174,9 +193,7 @@ const getAllWithDetails = async (req, res) => {
   }
 };
 
-
-
-// ============ GET MAHASISWA BY NIM WITH DETAILS (FIXED) ============
+// ============ GET MAHASISWA BY NIM WITH DETAILS ============
 const getByNimWithDetails = async (req, res) => {
   try {
     const { nim } = req.params;
@@ -184,12 +201,13 @@ const getByNimWithDetails = async (req, res) => {
     const mahasiswa = await mahasiswaService.getMahasiswaByNimWithDetails(nim);
 
     if (!mahasiswa) {
-      return res.status(HTTP_STATUS.NOT_FOUND).json(
-        formatResponse('Error', 'Mahasiswa tidak ditemukan')
-      );
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        status: 'Error',
+        message: 'Mahasiswa tidak ditemukan'
+      });
     }
 
-    // ✅ Format data
+    // Format data
     const formattedData = {
       id: mahasiswa.id,
       npm: mahasiswa.npm,
@@ -205,14 +223,17 @@ const getByNimWithDetails = async (req, res) => {
       nilai: mahasiswa.nilai || []
     };
 
-    res.status(HTTP_STATUS.OK).json(
-      formatResponse('Success', 'Data mahasiswa berhasil diambil', formattedData)
-    );
+    res.status(HTTP_STATUS.OK).json({
+      status: 'Success',
+      message: 'Data mahasiswa berhasil diambil',
+      data: formattedData
+    });
   } catch (error) {
     console.error('❌ Error in getByNimWithDetails:', error);
-    res.status(HTTP_STATUS.INTERNAL_ERROR).json(
-      formatResponse('Error', error.message)
-    );
+    res.status(HTTP_STATUS.INTERNAL_ERROR).json({
+      status: 'Error',
+      message: error.message || 'Gagal mengambil data mahasiswa'
+    });
   }
 };
 
