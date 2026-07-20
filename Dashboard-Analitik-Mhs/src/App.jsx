@@ -73,6 +73,8 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/upload" element={<Upload />} />
               <Route path="/pembimbing" element={<Pembimbing />} />
+              
+              {/* ✅ Route untuk detail mahasiswa - menggunakan parameter id */}
               <Route path="/mahasiswa/:id" element={<MahasiswaDetail />} />
               
               <Route path="/unauthorized" element={<Unauthorized />} />
