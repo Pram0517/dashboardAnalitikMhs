@@ -60,50 +60,50 @@ const MahasiswaDetail = () => {
   // ============ DATA TIDAK DITEMUKAN ============
   if (notFound || !analytics) {
     return (
-      <div className="max-w-4xl mx-auto p-6 animate-fade-in font-sans">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="flex items-center gap-2 text-text-muted hover:text-accent2 transition-colors font-semibold text-sm mb-6"
-        >
-          <ArrowLeft size={16} /> Kembali
-        </button>
-        
-        <div className="bg-white border border-secondary/20 rounded-3xl p-12 text-center shadow-sm">
-          <div className="w-24 h-24 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-6">
-            <Users size={48} className="text-text-muted/40" />
-          </div>
-          <h2 className="text-2xl font-extrabold text-accent2 mb-3">
-            Data Mahasiswa Tidak Ditemukan
-          </h2>
-          <p className="text-text-muted font-medium mb-2 text-base">
-            Mahasiswa dengan NIM <span className="font-bold text-accent2 bg-secondary/10 px-2 py-0.5 rounded">{actualId || id}</span> tidak terdaftar dalam sistem.
-          </p>
-          <p className="text-sm text-text-muted/70 mb-8">
-            Pastikan NIM yang Anda masukkan sudah benar atau hubungi administrator.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
+        <div className="max-w-4xl mx-auto p-6 animate-fade-in font-sans">
             <button 
-              onClick={() => navigate(-1)} 
-              className="px-6 py-3 bg-accent2 text-white rounded-xl text-sm font-bold shadow-lg shadow-accent2/20 hover:bg-accent2/90 transition-all"
+                onClick={() => navigate(-1)} 
+                className="flex items-center gap-2 text-text-muted hover:text-accent2 transition-colors font-semibold text-sm mb-6"
             >
-              Kembali
+                <ArrowLeft size={16} /> Kembali
             </button>
-            <button 
-              onClick={() => navigate('/evaluasi-studi')} 
-              className="px-6 py-3 bg-white border border-secondary/30 text-accent2 rounded-xl text-sm font-bold hover:border-accent1 hover:bg-secondary/5 transition-all"
-            >
-              Daftar Mahasiswa
-            </button>
-          </div>
-          <div className="mt-8 p-4 bg-secondary/5 rounded-xl border border-secondary/10">
-            <p className="text-xs text-text-muted">
-              <span className="font-bold">Tips:</span> Periksa kembali NIM atau gunakan fitur pencarian di halaman Evaluasi Studi.
-            </p>
-          </div>
+            
+            <div className="bg-white border border-secondary/20 rounded-3xl p-12 text-center shadow-sm">
+                <div className="w-24 h-24 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-6">
+                    <Users size={48} className="text-text-muted/40" />
+                </div>
+                <h2 className="text-2xl font-extrabold text-accent2 mb-3">
+                    Data Mahasiswa Tidak Ditemukan
+                </h2>
+                <p className="text-text-muted font-medium mb-2 text-base">
+                    Mahasiswa dengan NIM <span className="font-bold text-accent2 bg-secondary/10 px-2 py-0.5 rounded">{actualId || id}</span> tidak terdaftar dalam sistem.
+                </p>
+                <p className="text-sm text-text-muted/70 mb-8">
+                    Pastikan NIM yang Anda masukkan sudah benar atau hubungi administrator.
+                </p>
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                    <button 
+                        onClick={() => navigate(-1)} 
+                        className="px-6 py-3 bg-accent2 text-white rounded-xl text-sm font-bold shadow-lg shadow-accent2/20 hover:bg-accent2/90 transition-all"
+                    >
+                        Kembali
+                    </button>
+                    <button 
+                        onClick={() => navigate('/evaluasi-studi')} 
+                        className="px-6 py-3 bg-white border border-secondary/30 text-accent2 rounded-xl text-sm font-bold hover:border-accent1 hover:bg-secondary/5 transition-all"
+                    >
+                        Daftar Mahasiswa
+                    </button>
+                </div>
+                <div className="mt-8 p-4 bg-secondary/5 rounded-xl border border-secondary/10">
+                    <p className="text-xs text-text-muted">
+                        <span className="font-bold">Tips:</span> Periksa kembali NIM atau gunakan fitur pencarian di halaman Evaluasi Studi.
+                    </p>
+                </div>
+            </div>
         </div>
-      </div>
     );
-  }
+}
 
   const { student, currentSemester, ipk, totalSks, totalSksKurikulum, riwayatNilai, sksTidakLulusList, totalSksTidakLulus, belumDiambil, estimasiKelulusan, prediksiRisiko, aikStatus, riwayatKhs, capstone, skripsi } = analytics;
 
