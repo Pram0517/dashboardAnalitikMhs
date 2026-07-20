@@ -1,3 +1,4 @@
+// FRONTEND/src/services/apiService.js
 import { dummySkripsi as initialSkripsi } from '../data/skripsiData';
 import { dummyCapstone as initialCapstone } from '../data/capstoneData';
 import { dosenData } from '../data/dosenData';
@@ -37,17 +38,19 @@ export const apiService = {
     return enrichedDosen;
   },
 
+  // ============ GET MAHASISWA BY NIM ============
   getMahasiswaByNIM: async (nim) => {
     await delay();
     const allStudents = [...localSkripsi, ...localCapstone];
     const mhs = allStudents.find(s => s.nim === nim);
     
+    // ✅ Kembalikan null jika tidak ditemukan (bukan throw error)
     if (!mhs) {
-      throw new Error("Mahasiswa tidak ditemukan");
+      return null;
     }
     
-    const isSkripsi = mhs.id.startsWith('S');
-    const isCapstone = mhs.id.startsWith('C');
+    const isSkripsi = mhs.id?.startsWith('S');
+    const isCapstone = mhs.id?.startsWith('C');
     
     return {
       ...mhs,
