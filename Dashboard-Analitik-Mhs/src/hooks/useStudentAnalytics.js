@@ -1,15 +1,14 @@
+// FRONTEND/src/hooks/useStudentAnalytics.js
 import { useState, useEffect } from 'react';
 import { mahasiswaDetailService } from '../services/mahasiswaDetailService';
 import { evaluasiService } from '../services/evaluasiService';
-import { apiService } from '../services/apiService'; // NEW: Import our apiService
+import { apiService } from '../services/apiService';
 
 const GRADE_WEIGHTS = {
     'A': 4.00, 'A-': 3.75, 'B+': 3.50, 'B': 3.00, 'B-': 2.75, 'C+': 2.50, 'C': 2.00, 'C-': 1.75, 'D+': 1.50, 'D': 1.00, 'E': 0.00
 };
 
 // ============ NORMALISASI STATUS MAHASISWA ============
-// Backend menyimpan status dalam huruf kecil ('aktif', 'cuti', 'non-aktif'),
-// sedangkan tampilan (badge) mengharapkan format Capitalized ('Aktif', 'Cuti', 'Non-Aktif').
 const STATUS_MAP = {
     'aktif': 'Aktif',
     'cuti': 'Cuti',
@@ -28,12 +27,14 @@ export const useStudentAnalytics = (nim) => {
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [notFound, setNotFound] = useState(false);
 
     useEffect(() => {
-        const fetchData = async() => {
+        const fetchData = async () => {
             try {
                 setLoading(true);
                 setError(null);
+                setNotFound(false);
 
                 let targetNim = nim;
                 if (!targetNim) {
@@ -45,46 +46,68 @@ export const useStudentAnalytics = (nim) => {
                     throw new Error('NIM tidak ditemukan. Silakan login ulang.');
                 }
 
-                // Coba ambil data dari API MOCK (skripsiData / capstoneData)
+                // ============ STEP 1: Cek Data Mahasiswa di API ============
+                let mahasiswaData = null;
                 let mockAkhir = null;
+                let data = null;
+
                 try {
-                  mockAkhir = await apiService.getMahasiswaByNIM(targetNim);
-                } catch (e) {
-                  console.log("Not found in skripsi/capstone mock data, fallback to old mock");
+                    // Coba ambil dari API backend terlebih dahulu
+                    data = await mahasiswaDetailService.getAllData(targetNim);
+                    mahasiswaData = data.mahasiswa;
+                } catch (err) {
+                    console.log('⚠️ Mahasiswa not found in backend:', err.message);
+                    // Jika error karena data tidak ditemukan, coba cek di mock data
                 }
 
-                // Data profil, capstone, skripsi, riwayat upload KHS
-                let data;
-                try {
-                  data = await mahasiswaDetailService.getAllData(targetNim);
-                } catch(e) {
-                  // Fallback dummy for missing backend
-                  data = { mahasiswa: { nim: targetNim, nama: mockAkhir?.nama || 'Mahasiswa Dummy' }, khs: [], capstone: null, skripsi: null };
+                // ============ STEP 2: Cek di Mock Data (Skripsi/Capstone) ============
+                if (!mahasiswaData || !mahasiswaData.nama) {
+                    try {
+                        mockAkhir = await apiService.getMahasiswaByNIM(targetNim);
+                        if (mockAkhir) {
+                            console.log('✅ Found in mock data:', mockAkhir);
+                        }
+                    } catch (e) {
+                        console.log('⚠️ Not found in mock data:', e.message);
+                    }
                 }
 
-                // Data nilai berbasis kurikulum (sudah termasuk MK yang belum diambil)
-                let kurikulumRes;
-                try {
-                  kurikulumRes = await evaluasiService.getKurikulumWithNilai(targetNim);
-                } catch (e) {
-                  kurikulumRes = { data: [] };
+                // ============ STEP 3: Jika Data Tidak Ditemukan ============
+                if (!mahasiswaData && !mockAkhir) {
+                    console.log('❌ Student not found for NIM:', targetNim);
+                    setNotFound(true);
+                    setError('Mahasiswa tidak ditemukan');
+                    setAnalytics(null);
+                    setLoading(false);
+                    return;
                 }
-                const kurikulumData = kurikulumRes.data || [];
 
-                const student = data.mahasiswa;
-                const khsList = data.khs || [];
-                
+                // ============ STEP 4: Proses Data ============
+                // Build student object dari data yang ada
+                const student = mahasiswaData || {};
+                const khsList = data?.khs || [];
+
                 // Override capstone / skripsi if mockAkhir exists
-                let capstone = data.capstone || { judul: '-', status: 'Belum Mulai' };
-                let skripsi = data.skripsi || { judul: '-', status: 'Belum Mulai', dosenPembimbing: '-' };
+                let capstone = data?.capstone || { judul: '-', status: 'Belum Mulai' };
+                let skripsi = data?.skripsi || { judul: '-', status: 'Belum Mulai', dosenPembimbing: '-' };
 
                 if (mockAkhir) {
-                  if (mockAkhir.tipeTugasAkhir === 'Skripsi') {
-                    skripsi = { ...mockAkhir };
-                  } else {
-                    capstone = { ...mockAkhir };
-                  }
+                    if (mockAkhir.tipeTugasAkhir === 'Skripsi') {
+                        skripsi = { ...mockAkhir };
+                    } else {
+                        capstone = { ...mockAkhir };
+                    }
                 }
+
+                // ============ STEP 5: Ambil Data Kurikulum ============
+                let kurikulumRes;
+                try {
+                    kurikulumRes = await evaluasiService.getKurikulumWithNilai(targetNim);
+                } catch (e) {
+                    console.log('⚠️ Kurikulum data not found, using empty data');
+                    kurikulumRes = { data: [] };
+                }
+                const kurikulumData = kurikulumRes.data || [];
 
                 // ============ RIWAYAT UPLOAD KHS ============
                 let riwayatKhs = [];
@@ -117,7 +140,16 @@ export const useStudentAnalytics = (nim) => {
                         return;
                     }
 
-                    const nilaiItem = { kode: mk.kode_mk, nama: mk.nama_mata_kuliah, sks: mk.sks, nilai: mk.nilai, bobot: mk.bobot, semester: mk.semester, kelas: '-', wp };
+                    const nilaiItem = {
+                        kode: mk.kode_mk,
+                        nama: mk.nama_mata_kuliah,
+                        sks: mk.sks,
+                        nilai: mk.nilai,
+                        bobot: mk.bobot,
+                        semester: mk.semester,
+                        kelas: '-',
+                        wp
+                    };
                     riwayatNilai.push(nilaiItem);
                     totalSks += mk.sks || 0;
                     totalBobot += (mk.bobot || 0) * (mk.sks || 0);
@@ -147,6 +179,7 @@ export const useStudentAnalytics = (nim) => {
                     prediksiRisiko = 'Berisiko Terlambat';
                 }
 
+                // ============ AIK DATA ============
                 const aikData = student.aikData || [
                     { nama: 'Tahsinul Quran', jenis: 'Wajib', status: 'Lulus' },
                     { nama: 'Tahfidzul Quran', jenis: 'Wajib', status: 'Lulus' },
@@ -165,14 +198,13 @@ export const useStudentAnalytics = (nim) => {
                     detail: aikData
                 };
 
+                // ============ SET ANALYTICS ============
                 setAnalytics({
                     student: {
                         nim: student.npm || student.nim || targetNim,
                         nama: student.nama_lengkap || student.nama || mockAkhir?.nama || 'Mahasiswa',
                         angkatan: student.angkatan || mockAkhir?.angkatan || 2022,
-                        // FIX: normalisasi status supaya konsisten 'Aktif' / 'Cuti' / 'Non-Aktif'
-                        // (backend menyimpan huruf kecil seperti 'aktif', badge butuh 'Aktif')
-                        status: normalizeStatus(student.status),
+                        status: normalizeStatus(student.status || mockAkhir?.status || 'aktif'),
                         semester: student.semester || 8,
                         evaluasiStatus: student.evaluasi_status || 'Belum Evaluasi',
                         evaluasiPemicu: student.evaluasi_pemicu || 'Studi berjalan normal',
@@ -205,7 +237,17 @@ export const useStudentAnalytics = (nim) => {
                 setLoading(false);
             } catch (err) {
                 console.error('Error fetching student data:', err);
-                setError(err.message);
+                
+                // Cek apakah error karena data tidak ditemukan
+                if (err.message?.includes('tidak ditemukan') || 
+                    err.message?.includes('not found') ||
+                    err.message?.includes('404')) {
+                    setNotFound(true);
+                    setError('Mahasiswa tidak ditemukan');
+                    setAnalytics(null);
+                } else {
+                    setError(err.message || 'Gagal memuat data mahasiswa');
+                }
                 setLoading(false);
             }
         };
@@ -213,5 +255,5 @@ export const useStudentAnalytics = (nim) => {
         fetchData();
     }, [nim]);
 
-    return { analytics, loading, error };
+    return { analytics, loading, error, notFound };
 };
